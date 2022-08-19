@@ -17,7 +17,7 @@ const MoonlinkDashboard = () => {
   // Initial State
   const { account, chainId, error, deactivate, activateBrowserWallet } = useEthers();
   const isConnected = account !== undefined;
-  console.log(chainId, error);
+  if(error) console.log(error);
 
   const networkName = (() => {
     switch(chainId) {
