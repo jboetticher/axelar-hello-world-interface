@@ -3,67 +3,26 @@ import { Container, Button, Icon, Menu } from 'semantic-ui-react';
 import Head from 'next/head';
 import SendMessage from '../components/SendMessage';
 import Link from 'next/link';
-import detectEthereumProvider from '@metamask/detect-provider';
-import { Mainnet, DAppProvider, useEtherBalance, useEthers } from '@usedapp/core';
+import { MoonbaseAlpha, FantomTestnet, AvalancheTestnet, Mumbai, useEthers } from '@usedapp/core';
 
-const config = {
-  /*readOnlyChainId: Mainnet.chainId,
-  readOnlyUrls: {
-    [Mainnet.chainId]: getDefaultProvider('mainnet'),
-  }*/
-}
-
-const MoonlinkDashboard = () => {
+const Dashboard = () => {
   // Initial State
   const { account, chainId, error, deactivate, activateBrowserWallet } = useEthers();
   const isConnected = account !== undefined;
-  if(error) console.log(error);
+  if (error) console.log(error.name);
+  console.log(chainId);
 
   const networkName = (() => {
-    switch(chainId) {
+    if (chainId === undefined && error.name === 'ChainIdError') return 'Not Supported';
+    switch (chainId) {
       case undefined: return 'Not Connected';
-      case 1287: return 'Moonbase Alpha';
+      case MoonbaseAlpha.chainId: return 'Moonbase Alpha';
+      case FantomTestnet.chainId: return 'Fantom Testnet';
+      case AvalancheTestnet.chainId: return 'Avalanche Fuji';
+      case Mumbai.chainId: return 'Mumbai';
       default: return 'Not Supported';
     }
   })();
-
-  /*
-  const checkMetamask = async () => {
-    const provider = await detectEthereumProvider({ mustBeMetaMask: true });
-
-    if (provider) {
-      const chainId = await provider.request({
-        method: 'eth_chainId',
-      });
-
-      let networkName;
-      switch (chainId) {
-        case '0x507':
-          networkName = 'Moonbase Alpha';
-          break;
-        default:
-          networkName = '';
-          setAccount('Only Moonbase Alpha Supported');
-          break;
-      }
-      if (networkName !== '') {
-        setNetworkName(networkName);
-        const accounts = await ethereum.request({
-          method: 'eth_requestAccounts',
-        });
-
-        // Update State
-        if (accounts) {
-          setAccount(ethers.utils.getAddress(accounts[0]));
-          setConnected(true);
-        }
-      }
-    } else {
-      // MetaMask not detected
-      setAccount('MetaMask not Detected');
-    }
-  };
-  */
 
   return (
     <Container>
@@ -102,4 +61,4 @@ const MoonlinkDashboard = () => {
   );
 };
 
-export default MoonlinkDashboard;
+export default Dashboard;

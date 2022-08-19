@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Button, Form, Message, Grid, Input } from 'semantic-ui-react';
-import { Dropdown } from 'semantic-ui-react'
+import { Button, Dropdown, DropdownItemProps, Grid, Input } from 'semantic-ui-react';
+import { Chain, MoonbaseAlpha, FantomTestnet, AvalancheTestnet, useEthers, Mumbai } from '@usedapp/core';
 
 const jobids = require('../ethereum/jobid');
 
@@ -110,19 +110,15 @@ const Table = () => {
   };
   */
 
-  const [message, setMessage] = useState();
-  const [origin, setOrigin] = useState();
-  const [destination, setDestination] = useState();
+  const [message, setMessage] = useState<string>();
+  const [origin, setOrigin] = useState<number>();
+  const [destination, setDestination] = useState<number>();
 
-  useEffect(() => {
-    console.log(message, origin, destination);
-  }, [message, origin, destination]);
-
-  const chainOptions = [
-    { key: 'dev', value: 'dev', text: 'Moonbase Alpha', image: { avatar: true, src: './logos/moonbase.png' } },
-    { key: 'ftm', value: 'ftm', text: 'Fantom Testnet', image: { avatar: true, src: './logos/fantom.png' } },
-    { key: 'avax', value: 'avax', text: 'Avalanche Fuji', image: { avatar: true, src: './logos/avalanche.png' } }
-  ];
+  const chains: Chain[] = [MoonbaseAlpha, FantomTestnet, AvalancheTestnet, Mumbai];
+  const chainOptions: DropdownItemProps[] = [];
+  chains.forEach(c => {
+    chainOptions.push({ key: c.chainId, value: c.chainId, text: c.chainName, image: { avatar: true, src: `./logos/${c.chainName}.png` }});
+  })
 
 
   return (
@@ -135,14 +131,14 @@ const Table = () => {
         <Grid.Row centered columns={4} textAlign='center'>
           <Grid.Column>
             <h4>SEND</h4>
-            <Input placeholder='Your message...' fluid onChange={(_, x) => setMessage(x.value)} />
+            <Input placeholder='Your message...' fluid onChange={(_, data) => setMessage(data?.value)} />
           </Grid.Column>
           <Grid.Column>
             <h4>FROM</h4>
             <Dropdown
               placeholder='Select origin chain'
               options={chainOptions} fluid selection
-              onChange={(_, x) => setOrigin(x.value)}
+              onChange={(_, data) => setOrigin(data?.value as number)}
             />
           </Grid.Column>
           <Grid.Column>
@@ -150,7 +146,7 @@ const Table = () => {
             <Dropdown
               placeholder='Select destination chain'
               options={chainOptions} fluid selection
-              onChange={(_, x) => setDestination(x.value)}
+              onChange={(_, data) => setDestination(data?.value as number)}
             />
           </Grid.Column>
           <Grid.Column>
