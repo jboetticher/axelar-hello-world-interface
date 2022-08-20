@@ -3,3 +3,8 @@
     height: 19.2812px;
     margin-bottom: 14px;
 }
+
+.error-text {
+    color: red;
+    margin-top: 12px;
+}
