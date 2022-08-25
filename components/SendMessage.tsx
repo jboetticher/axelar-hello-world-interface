@@ -2,18 +2,16 @@ import React, { useState, useEffect } from 'react';
 import { Button, Dropdown, DropdownItemProps, Grid, Input } from 'semantic-ui-react';
 import {
   Chain, MoonbaseAlpha, FantomTestnet, AvalancheTestnet, Mumbai,
-  useEthers
+  useEthers, useCall
 } from '@usedapp/core';
 import { utils } from 'ethers';
 import { Contract } from '@ethersproject/contracts';
-import { JsonRpcProvider } from '@ethersproject/providers';
+import { TransactionReceipt } from '@ethersproject/abstract-provider';
 import HelloWorldABI from '../ethereum/abi/HelloWorldMessage.json';
 import addresses from '../ethereum/addresses';
-import { AxelarQueryAPI, Environment, EvmChain, GMPStatus } from '@axelar-network/axelarjs-sdk';
+import { AxelarQueryAPI, Environment, EvmChain } from '@axelar-network/axelarjs-sdk';
 import { tokenName } from '../ethereum/axelar/axelarHelpers';
 import useAxelarFunction, { AxelarTransactionState } from '../ethereum/axelar/useAxelarFunction';
-import { TransactionReceipt } from '@ethersproject/abstract-provider';
-import { config } from '../pages/_app';
 
 /**
  * Converts a chainId to a string that Axelar's contract can interpet
@@ -36,8 +34,6 @@ const SendMessage = () => {
   const [formError, setFormError] = useState<string>();
   const [isPending, setIsPending] = useState<boolean>();
   const [destReceipt, setDestReceipt] = useState<TransactionReceipt>();
-  const [networkToRead, setNetworkToRead] = useState<number>();
-  const [lastMessage, setLastMessage] = useState<string>();
   const { switchNetwork, chainId, account } = useEthers();
 
   // Set up network options
@@ -92,14 +88,11 @@ const SendMessage = () => {
     if (originState.status != 'None' && originState.status != 'PendingSignature') setIsPending(false);
   }, [originState.status]);
 
-  // Handling network read
-  useEffect(() => {
-    if(account != null && networkToRead != null) {
-      const provider = new JsonRpcProvider(config.readOnlyUrls[networkToRead]?.toString());
-      const contract = new Contract(addresses[networkToRead], HelloWorldABI, provider);
-      contract.lastMessage(account).then(x => setLastMessage(x));
-    }
-  }, [networkToRead, account]);
+  // Handling message reading
+  const [networkToRead, setNetworkToRead] = useState<number>(MoonbaseAlpha.chainId);
+  const readContract = new Contract(addresses[networkToRead], wethInterface);
+  const call = useCall({ contract: readContract, method: 'lastMessage', args: [account] }, { chainId: networkToRead });
+  const lastMessage: string = call?.value?.[0];
 
   return (
     <div>

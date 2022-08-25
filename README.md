@@ -1,12 +1,5 @@
-# Dashboard for Chainlink Oracles Deployed to Moonbase Alpha
+# Axelar Sample Frontend Interface
 ## Getting started
-
-Clone the repo:
-
-```
-git clone https://github.com/albertov19/moonlink-dashboard
-cd moonlink-dashboard
-```
 
 Install dependencies:
 
