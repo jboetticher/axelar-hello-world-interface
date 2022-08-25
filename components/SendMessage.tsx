@@ -2,19 +2,23 @@ import React, { useState, useEffect } from 'react';
 import { Button, Dropdown, DropdownItemProps, Grid, Input } from 'semantic-ui-react';
 import {
   Chain, MoonbaseAlpha, FantomTestnet, AvalancheTestnet, Mumbai,
-  useEthers, useContractFunction
+  useEthers
 } from '@usedapp/core';
 import { utils } from 'ethers';
 import { Contract } from '@ethersproject/contracts';
+import { JsonRpcProvider } from '@ethersproject/providers';
 import HelloWorldABI from '../ethereum/abi/HelloWorldMessage.json';
 import addresses from '../ethereum/addresses';
-import { AxelarQueryAPI, Environment, EvmChain } from '@axelar-network/axelarjs-sdk';
-import { testnetToMainnetChainName, tokenName } from '../ethereum/axelar/axelarHelpers';
+import { AxelarQueryAPI, Environment, EvmChain, GMPStatus } from '@axelar-network/axelarjs-sdk';
+import { tokenName } from '../ethereum/axelar/axelarHelpers';
+import useAxelarFunction, { AxelarTransactionState } from '../ethereum/axelar/useAxelarFunction';
+import { TransactionReceipt } from '@ethersproject/abstract-provider';
+import { config } from '../pages/_app';
 
 /**
  * Converts a chainId to a string that Axelar's contract can interpet
  * @param chainId The chain ID of the chain you want to send to.
- * @returns The name of a chain that Axelar can interpret
+ * @returns The name of a chain that Axelar can interprets
  */
 function chainIdToAxelar(chainId): EvmChain {
   switch (chainId) {
@@ -30,7 +34,11 @@ const SendMessage = () => {
   const [message, setMessage] = useState<string>();
   const [destination, setDestination] = useState<number>();
   const [formError, setFormError] = useState<string>();
-  const { switchNetwork, chainId } = useEthers();
+  const [isPending, setIsPending] = useState<boolean>();
+  const [destReceipt, setDestReceipt] = useState<TransactionReceipt>();
+  const [networkToRead, setNetworkToRead] = useState<number>();
+  const [lastMessage, setLastMessage] = useState<string>();
+  const { switchNetwork, chainId, account } = useEthers();
 
   // Set up network options
   const chains: Chain[] = [MoonbaseAlpha, FantomTestnet, AvalancheTestnet, Mumbai];
@@ -49,8 +57,12 @@ const SendMessage = () => {
   // Submit transaction
   const wethInterface = new utils.Interface(HelloWorldABI);
   const contract = new Contract(addresses[chainId], wethInterface);
-  const { state, send } = useContractFunction(contract, 'sendMessage', { transactionName: 'Send Message' });
+  const { originState, send, state, gmp, resetState } = useAxelarFunction(contract, 'sendMessage', { transactionName: 'Send Message' });
   async function sendTransaction() {
+    // Reset state
+    resetState();
+    setIsPending(true);
+
     // Calculate potential cross-chain gas fee
     const axlearSDK = new AxelarQueryAPI({ environment: Environment.TESTNET });
     const estimateGasUsed = 200000;
@@ -63,9 +75,31 @@ const SendMessage = () => {
 
     // Send transaction
     const txReceipt = await send(message, addresses[destination], chainIdToAxelar(destination), { value: crossChainGasFee });
-    console.log("RECEIPT:", txReceipt);
+    setDestReceipt(txReceipt);
   }
 
+  // Extra transaction state handling to simplify interface logic
+  const axelarStateIsError =
+    state == AxelarTransactionState.OriginError ||
+    state == AxelarTransactionState.AxelarError ||
+    state == AxelarTransactionState.DestinationError;
+  const buttonIsLoading = (
+    state != AxelarTransactionState.None &&
+    state != AxelarTransactionState.Success &&
+    !axelarStateIsError) ||
+    isPending;
+  useEffect(() => {
+    if (originState.status != 'None' && originState.status != 'PendingSignature') setIsPending(false);
+  }, [originState.status]);
+
+  // Handling network read
+  useEffect(() => {
+    if(account != null && networkToRead != null) {
+      const provider = new JsonRpcProvider(config.readOnlyUrls[networkToRead]?.toString());
+      const contract = new Contract(addresses[networkToRead], HelloWorldABI, provider);
+      contract.lastMessage(account).then(x => setLastMessage(x));
+    }
+  }, [networkToRead, account]);
 
   return (
     <div>
@@ -98,14 +132,75 @@ const SendMessage = () => {
           </Grid.Column>
           <Grid.Column>
             <div className='h4-spacer' />
-            <Button disabled={!formIsValidated} onClick={sendTransaction}>Submit</Button>
+            <Button
+              onClick={sendTransaction}
+              disabled={!formIsValidated}
+              loading={buttonIsLoading}
+            >
+              Submit
+            </Button>
             <p className='error-text'>{formError}</p>
+          </Grid.Column>
+        </Grid.Row>
+        <br />
+        <Grid.Row centered columns={4} textAlign='center'>
+          <Grid.Column>
+            <h4>{chains.find(x => x.chainId === chainId)?.chainName} Status</h4>
+            <p className='wrp'>{originState?.transaction?.hash}</p>
+            <p className='wrp'>
+              {
+                state == AxelarTransactionState.None ? '---' :
+                  state == AxelarTransactionState.OriginError ? 'ERROR' :
+                    state == AxelarTransactionState.OriginPending ? 'PENDING' : 'SUCCESS'
+              }
+            </p>
+          </Grid.Column>
+          <Grid.Column>
+            <h4>Axelar Status</h4>
+            <p className='wrp'>{originState?.transaction?.hash}</p>
+            <p className='wrp'>
+              {
+                gmp == null ? '---' :
+                  state == AxelarTransactionState.AxelarError ? 'ERROR' :
+                    state == AxelarTransactionState.AxelarPending ? 'PENDING' : 'SUCCESS'
+              }
+            </p>
+          </Grid.Column>
+          <Grid.Column>
+            <h4>{chains.find(x => x.chainId === destination)?.chainName} Status</h4>
+            <p className='wrp'>{destReceipt?.transactionHash}</p>
+            <p className='wrp'>
+              {
+                gmp == null || state < AxelarTransactionState.DestinationPending ? '---' :
+                  state == AxelarTransactionState.DestinationError ? 'ERROR' :
+                    state == AxelarTransactionState.DestinationPending ? 'PENDING' : 'SUCCESS'
+              }
+            </p>
           </Grid.Column>
         </Grid.Row>
       </Grid>
       <br />
       <br />
-
+      {account == null ? <></> :
+        <>
+          <h3>Read Hello World Contracts</h3>
+          <Grid centered divided='vertically' textAlign='center'>
+            <Grid.Row centered columns={2} textAlign='center'>
+              <Grid.Column>
+                <Dropdown
+                  placeholder='Select network to read'
+                  options={chainOptions} fluid selection
+                  onChange={(_, data) => setNetworkToRead(data?.value as number)}
+                  value={networkToRead}
+                />
+              </Grid.Column>
+              <Grid.Column>
+                <h4>Message: "{lastMessage}"</h4>
+              </Grid.Column>
+            </Grid.Row>
+          </Grid>
+        </>
+      }
     </div>
   );
 };

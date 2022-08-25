@@ -8,3 +8,7 @@
     color: red;
     margin-top: 12px;
 }
+
+.wrp {
+    overflow-wrap: break-word;
+}
