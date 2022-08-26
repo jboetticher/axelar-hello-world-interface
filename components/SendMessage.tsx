@@ -74,6 +74,12 @@ const SendMessage = () => {
     setDestReceipt(txReceipt);
   }
 
+  // Handle message reading from multiple chains
+  const [networkToRead, setNetworkToRead] = useState<number>(MoonbaseAlpha.chainId);
+  const readContract = new Contract(addresses[networkToRead], wethInterface);
+  const call = useCall({ contract: readContract, method: 'lastMessage', args: [account] }, { chainId: networkToRead });
+  const lastMessage: string = call?.value?.[0];
+
   // Extra transaction state handling to simplify interface logic
   const axelarStateIsError =
     state == AxelarTransactionState.OriginError ||
@@ -84,15 +90,18 @@ const SendMessage = () => {
     state != AxelarTransactionState.Success &&
     !axelarStateIsError) ||
     isPending;
+  const originChainTxState = state == AxelarTransactionState.None ? '---' :
+    state == AxelarTransactionState.OriginError ? 'ERROR' :
+      state == AxelarTransactionState.OriginPending ? 'PENDING' : 'SUCCESS';
+  const axelarTxState = gmp == null ? '---' :
+    state == AxelarTransactionState.AxelarError ? 'ERROR' :
+      state == AxelarTransactionState.AxelarPending ? 'PENDING' : 'SUCCESS';
+  const destChainTxState = gmp == null || state < AxelarTransactionState.DestinationPending ? '---' :
+    state == AxelarTransactionState.DestinationError ? 'ERROR' :
+      state == AxelarTransactionState.DestinationPending ? 'PENDING' : 'SUCCESS';
   useEffect(() => {
     if (originState.status != 'None' && originState.status != 'PendingSignature') setIsPending(false);
   }, [originState.status]);
-
-  // Handling message reading
-  const [networkToRead, setNetworkToRead] = useState<number>(MoonbaseAlpha.chainId);
-  const readContract = new Contract(addresses[networkToRead], wethInterface);
-  const call = useCall({ contract: readContract, method: 'lastMessage', args: [account] }, { chainId: networkToRead });
-  const lastMessage: string = call?.value?.[0];
 
   return (
     <div>
@@ -140,35 +149,17 @@ const SendMessage = () => {
           <Grid.Column>
             <h4>{chains.find(x => x.chainId === chainId)?.chainName} Status</h4>
             <p className='wrp'>{originState?.transaction?.hash}</p>
-            <p className='wrp'>
-              {
-                state == AxelarTransactionState.None ? '---' :
-                  state == AxelarTransactionState.OriginError ? 'ERROR' :
-                    state == AxelarTransactionState.OriginPending ? 'PENDING' : 'SUCCESS'
-              }
-            </p>
+            <p className='wrp'>{originChainTxState}</p>
           </Grid.Column>
           <Grid.Column>
             <h4>Axelar Status</h4>
             <p className='wrp'>{originState?.transaction?.hash}</p>
-            <p className='wrp'>
-              {
-                gmp == null ? '---' :
-                  state == AxelarTransactionState.AxelarError ? 'ERROR' :
-                    state == AxelarTransactionState.AxelarPending ? 'PENDING' : 'SUCCESS'
-              }
-            </p>
+            <p className='wrp'>{axelarTxState}</p>
           </Grid.Column>
           <Grid.Column>
             <h4>{chains.find(x => x.chainId === destination)?.chainName} Status</h4>
             <p className='wrp'>{destReceipt?.transactionHash}</p>
-            <p className='wrp'>
-              {
-                gmp == null || state < AxelarTransactionState.DestinationPending ? '---' :
-                  state == AxelarTransactionState.DestinationError ? 'ERROR' :
-                    state == AxelarTransactionState.DestinationPending ? 'PENDING' : 'SUCCESS'
-              }
-            </p>
+            <p className='wrp'>{destChainTxState}</p>
           </Grid.Column>
         </Grid.Row>
       </Grid>
