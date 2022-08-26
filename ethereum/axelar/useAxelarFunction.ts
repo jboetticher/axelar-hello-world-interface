@@ -87,6 +87,7 @@ export default function useAxelarFunction
     resetState();
   }
 
+  // In case changing the function is required in the future. Doesn't do anything now
   function newSend(...args: Parameters<T["functions"][FN]>): Promise<TransactionReceipt> {
     return send(...args);
   }
