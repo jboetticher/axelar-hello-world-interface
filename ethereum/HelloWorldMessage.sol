@@ -53,16 +53,3 @@ contract HelloWorldMessage is IAxelarExecutable {
        lastMessage[adr] = str;
    }
 }
-
-contract DoubleHello {
-    HelloWorldMessage H;
-    constructor(HelloWorldMessage h) {
-        H = h;
-    }
-//   function sendMessage(string memory message, string memory destAddress, string memory destChain) external payable {
-
-    function send() external payable {
-        H.sendMessage{ value: 55389864900000 }("msg 1", "0xfb8afead05b130796de04f00d9213a7bac2bc6c2", "Fantom");
-        H.sendMessage{ value: 197036323830100000 }("msg 2", "0x827d4b6bd9660d1a4c42e4453307c8d3d5c1f051", "Avalanche");
-    }
-}
