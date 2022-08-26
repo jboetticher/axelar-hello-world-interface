@@ -29,6 +29,7 @@ function chainIdToAxelar(chainId): EvmChain {
 }
 
 const SendMessage = () => {
+  // State for sending the message
   const [message, setMessage] = useState<string>();
   const [destination, setDestination] = useState<number>();
   const [formError, setFormError] = useState<string>();
@@ -48,7 +49,7 @@ const SendMessage = () => {
     if (chainId === destination) setFormError('Must send to a different chain.');
     else setFormError('');
   }, [chainId, destination]);
-  const formIsValidated = destination != null && chainId != null && formError == '' && message != '';
+  const formIsValidated = destination != null && chainId != null && formError == '' && message != '' && message != null;
 
   // Submit transaction
   const wethInterface = new utils.Interface(HelloWorldABI);
