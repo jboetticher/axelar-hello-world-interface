@@ -9,6 +9,14 @@
     margin-top: 12px;
 }
 
+.success {
+    color: green;
+}
+
+.error {
+    color: red;
+}
+
 .wrp {
     overflow-wrap: break-word;
 }

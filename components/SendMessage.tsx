@@ -52,8 +52,8 @@ const SendMessage = () => {
   const formIsValidated = destination != null && chainId != null && formError == '' && message != '' && message != null;
 
   // Submit transaction
-  const wethInterface = new utils.Interface(HelloWorldABI);
-  const contract = new Contract(addresses[chainId], wethInterface);
+  const helloWorldInterface = new utils.Interface(HelloWorldABI);
+  const contract = new Contract(addresses[chainId], helloWorldInterface);
   const { originState, send, state, gmp, resetState } = useAxelarFunction(contract, 'sendMessage', { transactionName: 'Send Message' });
   async function sendTransaction() {
     // Reset state
@@ -77,7 +77,7 @@ const SendMessage = () => {
 
   // Handle message reading from multiple chains
   const [networkToRead, setNetworkToRead] = useState<number>(MoonbaseAlpha.chainId);
-  const readContract = new Contract(addresses[networkToRead], wethInterface);
+  const readContract = new Contract(addresses[networkToRead], helloWorldInterface);
   const call = useCall({ contract: readContract, method: 'lastMessage', args: [account] }, { chainId: networkToRead });
   const lastMessage: string = call?.value?.[0];
 
