@@ -34,7 +34,6 @@ const SendMessage = () => {
   const [destination, setDestination] = useState<number>();
   const [formError, setFormError] = useState<string>();
   const [isPending, setIsPending] = useState<boolean>();
-  const [destReceipt, setDestReceipt] = useState<TransactionReceipt>();
   const { switchNetwork, chainId, account } = useEthers();
 
   // Set up network options
@@ -72,7 +71,6 @@ const SendMessage = () => {
 
     // Send transaction
     const txReceipt = await send(message, addresses[destination], chainIdToAxelar(destination), { value: crossChainGasFee });
-    setDestReceipt(txReceipt);
   }
 
   // Handle message reading from multiple chains
@@ -106,7 +104,7 @@ const SendMessage = () => {
 
   return (
     <div>
-      <h3>Basic Request Model</h3>
+      <h3>Hello World Messaging</h3>
       <p>
         Send a string message from one chain to another. Select your destination and origin chains below.
       </p>
@@ -159,7 +157,6 @@ const SendMessage = () => {
           </Grid.Column>
           <Grid.Column>
             <h4>{chains.find(x => x.chainId === destination)?.chainName} Status</h4>
-            <p className='wrp'>{destReceipt?.transactionHash}</p>
             <p className='wrp'>{destChainTxState}</p>
           </Grid.Column>
         </Grid.Row>

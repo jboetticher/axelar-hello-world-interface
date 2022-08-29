@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useContractFunction } from '@usedapp/core';
 import { ContractFunctionNames, Falsy, TransactionOptions, TransactionStatus, TypedContract } from '@usedapp/core/dist/esm/src/model';
-import { AxelarGMPRecoveryAPI, Environment, GMPStatus, GMPStatusResponse } from '@axelar-network/axelarjs-sdk';
+import { AxelarGMPRecoveryAPI, Environment, GMPStatus, GMPStatusResponse, AxelarQueryAPI } from '@axelar-network/axelarjs-sdk';
 import { TransactionReceipt } from '@ethersproject/abstract-provider';
 
 export enum AxelarTransactionState {
@@ -52,14 +52,20 @@ export default function useAxelarFunction
   // Update Axelar status every 5 seconds
   async function beginAxelarStatusCheck() {
     const sdk = new AxelarGMPRecoveryAPI({ environment: Environment.TESTNET });
+
     while (1) {
       if (originState.transaction.hash == null) {
         setEntireState(AxelarTransactionState.OriginError);
         break;
       }
+      else if(entireState == AxelarTransactionState.None) {
+        // Can occur if function is reset, in which case we shouldn't be querying anymore
+        break;
+      }
 
       const gmpRes = await sdk.queryTransactionStatus(originState.transaction?.hash);
       setGMP(gmpRes);
+      console.log(await sdk.queryExecuteParams(originState.transaction?.hash));
 
       if(gmpRes.status == GMPStatus.CANNOT_FETCH_STATUS) {
         setEntireState(AxelarTransactionState.AxelarError);
