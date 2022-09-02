@@ -9,8 +9,6 @@ const Dashboard = () => {
   // Initial State
   const { account, chainId, error, deactivate, activateBrowserWallet } = useEthers();
   const isConnected = account !== undefined;
-  if (error) console.log(error.name);
-  console.log(chainId);
 
   const networkName = (() => {
     if (chainId === undefined && error.name === 'ChainIdError') return 'Not Supported';

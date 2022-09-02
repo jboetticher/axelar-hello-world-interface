@@ -65,7 +65,6 @@ export default function useAxelarFunction
 
       const gmpRes = await sdk.queryTransactionStatus(originState.transaction?.hash);
       setGMP(gmpRes);
-      console.log(await sdk.queryExecuteParams(originState.transaction?.hash));
 
       if(gmpRes.status == GMPStatus.CANNOT_FETCH_STATUS) {
         setEntireState(AxelarTransactionState.AxelarError);

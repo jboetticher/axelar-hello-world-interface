@@ -6,7 +6,6 @@ import {
 } from '@usedapp/core';
 import { utils } from 'ethers';
 import { Contract } from '@ethersproject/contracts';
-import { TransactionReceipt } from '@ethersproject/abstract-provider';
 import HelloWorldABI from '../ethereum/abi/HelloWorldMessage.json';
 import addresses from '../ethereum/addresses';
 import { AxelarQueryAPI, Environment, EvmChain } from '@axelar-network/axelarjs-sdk';
@@ -27,6 +26,7 @@ function chainIdToAxelar(chainId): EvmChain {
   }
   throw new Error(`Chain ${chainId} is not supported!`);
 }
+const EMPTY_ADDRESS = '0x9999999999999999999999999999999999999999';
 
 const SendMessage = () => {
   // State for sending the message
@@ -52,7 +52,7 @@ const SendMessage = () => {
 
   // Submit transaction
   const helloWorldInterface = new utils.Interface(HelloWorldABI);
-  const contract = new Contract(addresses[chainId], helloWorldInterface);
+  const contract = new Contract(addresses[chainId ?? 0] ?? EMPTY_ADDRESS, helloWorldInterface);
   const { originState, send, state, gmp, resetState } = useAxelarFunction(contract, 'sendMessage', { transactionName: 'Send Message' });
   async function sendTransaction() {
     // Reset state
@@ -76,7 +76,7 @@ const SendMessage = () => {
   // Handle message reading from multiple chains
   const [networkToRead, setNetworkToRead] = useState<number>(MoonbaseAlpha.chainId);
   const readContract = new Contract(addresses[networkToRead], helloWorldInterface);
-  const call = useCall({ contract: readContract, method: 'lastMessage', args: [account] }, { chainId: networkToRead });
+  const call = useCall({ contract: readContract, method: 'lastMessage', args: [account ?? EMPTY_ADDRESS] }, { chainId: networkToRead });
   const lastMessage: string = call?.value?.[0];
 
   // Extra transaction state handling to simplify interface logic
