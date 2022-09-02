@@ -26,6 +26,19 @@ function chainIdToAxelar(chainId): EvmChain {
   }
   throw new Error(`Chain ${chainId} is not supported!`);
 }
+/**
+ * Converts a chainId to a faucet URL
+ * @param chainId The chain ID of the chain you want to send to.
+ */
+ function chainIdToFaucet(chainId): string {
+  switch (chainId) {
+    case MoonbaseAlpha.chainId: return "https://apps.moonbeam.network/moonbase-alpha/faucet/";
+    case FantomTestnet.chainId: return "https://faucet.fantom.network/";
+    case AvalancheTestnet.chainId: return "https://faucet.avax.network/";
+    case Mumbai.chainId: return "https://faucet.polygon.technology/";
+    default: return null;
+  }
+}
 const EMPTY_ADDRESS = '0x9999999999999999999999999999999999999999';
 
 const SendMessage = () => {
@@ -42,6 +55,7 @@ const SendMessage = () => {
   chains.forEach(c => {
     chainOptions.push({ key: c.chainId, value: c.chainId, text: c.chainName, image: { avatar: true, src: `./logos/${c.chainName}.png` } });
   });
+  const URL = chainIdToFaucet(chainId);
 
   // Basic form error handling
   useEffect(() => {
@@ -115,7 +129,7 @@ const SendMessage = () => {
             <Input placeholder='Your message...' fluid onChange={(_, data) => setMessage(data?.value)} />
           </Grid.Column>
           <Grid.Column>
-            <h4>FROM</h4>
+            <h4>FROM { URL ? <a href={URL}>(Faucet)</a> : <></> } </h4>
             <Dropdown
               placeholder='Select origin chain'
               options={chainOptions} fluid selection
