@@ -149,7 +149,7 @@ const SendMessage = () => {
             <div className='h4-spacer' />
             <Button
               onClick={sendTransaction}
-              disabled={!formIsValidated}
+              disabled={!formIsValidated || buttonIsLoading}
               loading={buttonIsLoading}
             >
               Submit
