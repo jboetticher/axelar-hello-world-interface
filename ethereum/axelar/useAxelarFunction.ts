@@ -3,6 +3,7 @@ import { useContractFunction } from '@usedapp/core';
 import { ContractFunctionNames, Falsy, TransactionOptions, TransactionStatus, TypedContract } from '@usedapp/core/dist/esm/src/model';
 import { AxelarGMPRecoveryAPI, Environment, GMPStatus, GMPStatusResponse, AxelarQueryAPI } from '@axelar-network/axelarjs-sdk';
 import { TransactionReceipt } from '@ethersproject/abstract-provider';
+import TransactionState from '../TransactionState';
 
 export enum AxelarTransactionState {
   'None',
@@ -35,7 +36,7 @@ export default function useAxelarFunction
   // Watch state to ensure we're setting the right status
   useEffect(() => {
     // State switch to AxelarPending
-    if(originState.status == 'Mining') {
+    if (originState.status == 'Mining') {
       setEntireState(AxelarTransactionState.OriginPending);
     }
     else if (originState.status == 'Success' && entireState === AxelarTransactionState.OriginPending) {
@@ -44,7 +45,7 @@ export default function useAxelarFunction
       // Begin coroutine to check Axelar status
       beginAxelarStatusCheck();
     }
-    else if(originState.status == 'Exception' || originState.status == 'Fail') {
+    else if (originState.status == 'Exception' || originState.status == 'Fail') {
       setEntireState(AxelarTransactionState.OriginError);
     }
   }, [originState]);
@@ -58,7 +59,7 @@ export default function useAxelarFunction
         setEntireState(AxelarTransactionState.OriginError);
         break;
       }
-      else if(entireState == AxelarTransactionState.None) {
+      else if (entireState == AxelarTransactionState.None) {
         // Can occur if function is reset, in which case we shouldn't be querying anymore
         break;
       }
@@ -66,16 +67,16 @@ export default function useAxelarFunction
       const gmpRes = await sdk.queryTransactionStatus(originState.transaction?.hash);
       setGMP(gmpRes);
 
-      if(gmpRes.status == GMPStatus.CANNOT_FETCH_STATUS) {
+      if (gmpRes.status == GMPStatus.CANNOT_FETCH_STATUS) {
         setEntireState(AxelarTransactionState.AxelarError);
       }
-      else if(gmpRes.status == GMPStatus.DEST_EXECUTE_ERROR) {
+      else if (gmpRes.status == GMPStatus.DEST_EXECUTE_ERROR) {
         setEntireState(AxelarTransactionState.DestinationError);
       }
-      else if(gmpRes.status == GMPStatus.DEST_GATEWAY_APPROVED) {
+      else if (gmpRes.status == GMPStatus.DEST_GATEWAY_APPROVED) {
         setEntireState(AxelarTransactionState.DestinationPending);
       }
-      else if(gmpRes.status == GMPStatus.DEST_EXECUTED) {
+      else if (gmpRes.status == GMPStatus.DEST_EXECUTED) {
         setEntireState(AxelarTransactionState.Success);
         break;
       }
@@ -97,12 +98,39 @@ export default function useAxelarFunction
     return send(...args);
   }
 
+  const axelarStateIsError =
+    entireState == AxelarTransactionState.OriginError ||
+    entireState == AxelarTransactionState.AxelarError ||
+    entireState == AxelarTransactionState.DestinationError;
+  const isLoading = (
+    entireState != AxelarTransactionState.None &&
+    entireState != AxelarTransactionState.Success &&
+    !axelarStateIsError);
+  const originTxState = entireState == AxelarTransactionState.None ? '---' :
+    entireState == AxelarTransactionState.OriginError ? 'ERROR' :
+      entireState == AxelarTransactionState.OriginPending ? 'PENDING' : 'SUCCESS';
+  const axelarTxState = gmp == null ? '---' :
+    entireState == AxelarTransactionState.AxelarError ? 'ERROR' :
+      entireState == AxelarTransactionState.AxelarPending ? 'PENDING' : 'SUCCESS';
+  const destTxState = gmp == null || entireState < AxelarTransactionState.DestinationPending ? '---' :
+    entireState == AxelarTransactionState.DestinationError ? 'ERROR' :
+      entireState == AxelarTransactionState.DestinationPending ? 'PENDING' : 'SUCCESS';
+  const transactionState: TransactionState = {
+    errorState: axelarStateIsError,
+    isLoading,
+    hasMiddleman: true,
+    originTxState,
+    middlemanTxState: axelarTxState,
+    destTxState
+  }
+
   return {
     originState,
     send: newSend,
     originEvents: events,
     resetState: newResetState,
     state: entireState,
-    gmp
+    gmp,
+    transactionState
   };
 }

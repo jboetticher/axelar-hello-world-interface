@@ -67,7 +67,7 @@ const SendMessage = () => {
   // Submit transaction
   const helloWorldInterface = new utils.Interface(HelloWorldABI);
   const contract = new Contract(addresses[chainId ?? 0] ?? EMPTY_ADDRESS, helloWorldInterface);
-  const { originState, send, state, gmp, resetState } = useAxelarFunction(contract, 'sendMessage', { transactionName: 'Send Message' });
+  const { originState, send, transactionState, resetState } = useAxelarFunction(contract, 'sendMessage', { transactionName: 'Send Message' });
   async function sendTransaction() {
     // Reset state
     resetState();
@@ -93,28 +93,11 @@ const SendMessage = () => {
   const call = useCall({ contract: readContract, method: 'lastMessage', args: [account ?? EMPTY_ADDRESS] }, { chainId: networkToRead });
   const lastMessage: string = call?.value?.[0];
 
-  // Extra transaction state handling to simplify interface logic
-  const axelarStateIsError =
-    state == AxelarTransactionState.OriginError ||
-    state == AxelarTransactionState.AxelarError ||
-    state == AxelarTransactionState.DestinationError;
-  const buttonIsLoading = (
-    state != AxelarTransactionState.None &&
-    state != AxelarTransactionState.Success &&
-    !axelarStateIsError) ||
-    isPending;
-  const originChainTxState = state == AxelarTransactionState.None ? '---' :
-    state == AxelarTransactionState.OriginError ? 'ERROR' :
-      state == AxelarTransactionState.OriginPending ? 'PENDING' : 'SUCCESS';
-  const axelarTxState = gmp == null ? '---' :
-    state == AxelarTransactionState.AxelarError ? 'ERROR' :
-      state == AxelarTransactionState.AxelarPending ? 'PENDING' : 'SUCCESS';
-  const destChainTxState = gmp == null || state < AxelarTransactionState.DestinationPending ? '---' :
-    state == AxelarTransactionState.DestinationError ? 'ERROR' :
-      state == AxelarTransactionState.DestinationPending ? 'PENDING' : 'SUCCESS';
   useEffect(() => {
     if (originState.status != 'None' && originState.status != 'PendingSignature') setIsPending(false);
   }, [originState.status]);
+
+  const buttonIsLoading = transactionState.isLoading || isPending;
 
   return (
     <div>
@@ -162,16 +145,16 @@ const SendMessage = () => {
           <Grid.Column>
             <h4>{chains.find(x => x.chainId === chainId)?.chainName} Status</h4>
             <p className='wrp'>{originState?.transaction?.hash}</p>
-            <p className='wrp'>{originChainTxState}</p>
+            <p className='wrp'>{transactionState.originTxState}</p>
           </Grid.Column>
           <Grid.Column>
             <h4>Axelar Status</h4>
             <p className='wrp'>{originState?.transaction?.hash}</p>
-            <p className='wrp'>{axelarTxState}</p>
+            <p className='wrp'>{transactionState.middlemanTxState}</p>
           </Grid.Column>
           <Grid.Column>
             <h4>{chains.find(x => x.chainId === destination)?.chainName} Status</h4>
-            <p className='wrp'>{destChainTxState}</p>
+            <p className='wrp'>{transactionState.destTxState}</p>
           </Grid.Column>
         </Grid.Row>
       </Grid>
