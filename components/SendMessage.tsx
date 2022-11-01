@@ -57,6 +57,14 @@ const SendMessage = () => {
   });
   const URL = chainIdToFaucet(chainId);
 
+  // Set up protocol options
+  const protocolOptions: DropdownItemProps[] = [ 
+    { key: 0, value: "axelar", text: "Axelar", image: { avatar: true, src: './logos/axelar.svg' } },
+    { key: 0, value: "hyperlane", text: "Hyperlane", image: { avatar: true, src: './logos/hyperlane.png' } }, 
+    { key: 0, value: "layerzero", text: "Layer Zero", image: { avatar: true, src: './logos/layerzero.png' } }, 
+  ];
+  const [protocol, setProtocol] = useState<string>(protocolOptions[0].value as string);
+
   // Basic form error handling
   useEffect(() => {
     if (chainId === destination) setFormError('Must send to a different chain.');
@@ -106,10 +114,19 @@ const SendMessage = () => {
         Send a string message from one chain to another. Select your destination and origin chains below.
       </p>
       <Grid centered divided='vertically' textAlign='center'>
-        <Grid.Row centered columns={4} textAlign='center'>
+        <Grid.Row centered columns={3} textAlign='center'>
           <Grid.Column>
             <h4>SEND</h4>
             <Input placeholder='Your message...' fluid onChange={(_, data) => setMessage(data?.value)} />
+          </Grid.Column>
+          <Grid.Column>
+            <h4>VIA</h4>
+            <Dropdown
+              placeholder='Select protocol'
+              options={protocolOptions} fluid selection
+              onChange={(_, data) => setProtocol(data?.value as string)}
+              value={protocol}
+            />
           </Grid.Column>
           <Grid.Column>
             <h4>FROM { URL ? <a href={URL}>(Faucet)</a> : <></> } </h4>
