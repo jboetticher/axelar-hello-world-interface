@@ -7,10 +7,10 @@ import {
 import { utils } from 'ethers';
 import { Contract } from '@ethersproject/contracts';
 import HelloWorldABI from '../ethereum/abi/HelloWorldMessage.json';
-import addresses from '../ethereum/addresses';
 import { AxelarQueryAPI, Environment, EvmChain } from '@axelar-network/axelarjs-sdk';
 import { tokenName } from '../ethereum/axelar/axelarHelpers';
-import useAxelarFunction, { AxelarTransactionState } from '../ethereum/axelar/useAxelarFunction';
+import AxelarModule from '../ethereum/axelar/AxelarModule';
+import ConnectedContractModule from '../ethereum/ConnectedContractModule';
 
 /**
  * Converts a chainId to a string that Axelar's contract can interpet
@@ -30,7 +30,7 @@ function chainIdToAxelar(chainId): EvmChain {
  * Converts a chainId to a faucet URL
  * @param chainId The chain ID of the chain you want to send to.
  */
- function chainIdToFaucet(chainId): string {
+function chainIdToFaucet(chainId): string {
   switch (chainId) {
     case MoonbaseAlpha.chainId: return "https://apps.moonbeam.network/moonbase-alpha/faucet/";
     case FantomTestnet.chainId: return "https://faucet.fantom.network/";
@@ -41,6 +41,13 @@ function chainIdToAxelar(chainId): EvmChain {
 }
 const EMPTY_ADDRESS = '0x9999999999999999999999999999999999999999';
 
+/*
+Each protocol has their own: 
+- Available chains
+- Querying system
+- Contract deployments
+*/
+
 const SendMessage = () => {
   // State for sending the message
   const [message, setMessage] = useState<string>();
@@ -49,21 +56,23 @@ const SendMessage = () => {
   const [isPending, setIsPending] = useState<boolean>();
   const { switchNetwork, chainId, account } = useEthers();
 
+  // Set up protocol options
+  const protocolOptions: DropdownItemProps[] = [
+    { key: 0, value: "axelar", text: "Axelar", image: { avatar: true, src: './logos/axelar.svg' } },
+    { key: 1, value: "hyperlane", text: "Hyperlane", image: { avatar: true, src: './logos/hyperlane.png' } },
+    { key: 2, value: "layerzero", text: "Layer Zero", image: { avatar: true, src: './logos/layerzero.png' } },
+  ];
+  const [protocol, setProtocol] = useState<string>(protocolOptions[0].value as string);
+  const modules = { axelar: new AxelarModule(), hyperlane: new AxelarModule(), layerzero: new AxelarModule() };
+  const currentModule: ConnectedContractModule = modules[protocol ?? protocolOptions[0].value as string];
+
   // Set up network options
-  const chains: Chain[] = [MoonbaseAlpha, FantomTestnet, AvalancheTestnet, Mumbai];
+  const chains: Chain[] = currentModule.chains;
   const chainOptions: DropdownItemProps[] = [];
   chains.forEach(c => {
     chainOptions.push({ key: c.chainId, value: c.chainId, text: c.chainName, image: { avatar: true, src: `./logos/${c.chainName}.png` } });
   });
   const URL = chainIdToFaucet(chainId);
-
-  // Set up protocol options
-  const protocolOptions: DropdownItemProps[] = [ 
-    { key: 0, value: "axelar", text: "Axelar", image: { avatar: true, src: './logos/axelar.svg' } },
-    { key: 0, value: "hyperlane", text: "Hyperlane", image: { avatar: true, src: './logos/hyperlane.png' } }, 
-    { key: 0, value: "layerzero", text: "Layer Zero", image: { avatar: true, src: './logos/layerzero.png' } }, 
-  ];
-  const [protocol, setProtocol] = useState<string>(protocolOptions[0].value as string);
 
   // Basic form error handling
   useEffect(() => {
@@ -74,8 +83,8 @@ const SendMessage = () => {
 
   // Submit transaction
   const helloWorldInterface = new utils.Interface(HelloWorldABI);
-  const contract = new Contract(addresses[chainId ?? 0] ?? EMPTY_ADDRESS, helloWorldInterface);
-  const { originState, send, transactionState, resetState } = useAxelarFunction(contract, 'sendMessage', { transactionName: 'Send Message' });
+  const contract = new Contract(currentModule.addresses[chainId ?? 0] ?? EMPTY_ADDRESS, helloWorldInterface);
+  const { originState, send, transactionState, resetState } = currentModule.useCrossChainFunction(contract, 'sendMessage', { transactionName: 'Send Message' });
   async function sendTransaction() {
     // Reset state
     resetState();
@@ -92,14 +101,17 @@ const SendMessage = () => {
     );
 
     // Send transaction
-    const txReceipt = await send(message, addresses[destination], chainIdToAxelar(destination), { value: crossChainGasFee });
+    const txReceipt = await send(message, currentModule.addresses[destination], chainIdToAxelar(destination), { value: crossChainGasFee });
   }
 
   // Handle message reading from multiple chains
   const [networkToRead, setNetworkToRead] = useState<number>(MoonbaseAlpha.chainId);
-  const readContract = new Contract(addresses[networkToRead], helloWorldInterface);
+  const [protocolToRead, setProtocolToRead] = useState<string>('axelar');
+  const readContract = new Contract(modules[protocolToRead].addresses[networkToRead], helloWorldInterface);
   const call = useCall({ contract: readContract, method: 'lastMessage', args: [account ?? EMPTY_ADDRESS] }, { chainId: networkToRead });
+  console.log(modules[protocolToRead].addresses[networkToRead], call, { contract: readContract, method: 'lastMessage', args: [account ?? EMPTY_ADDRESS] }, { chainId: networkToRead });
   const lastMessage: string = call?.value?.[0];
+
 
   useEffect(() => {
     if (originState.status != 'None' && originState.status != 'PendingSignature') setIsPending(false);
@@ -114,7 +126,7 @@ const SendMessage = () => {
         Send a string message from one chain to another. Select your destination and origin chains below.
       </p>
       <Grid centered divided='vertically' textAlign='center'>
-        <Grid.Row centered columns={3} textAlign='center'>
+        <Grid.Row centered columns={5} textAlign='center'>
           <Grid.Column>
             <h4>SEND</h4>
             <Input placeholder='Your message...' fluid onChange={(_, data) => setMessage(data?.value)} />
@@ -129,7 +141,7 @@ const SendMessage = () => {
             />
           </Grid.Column>
           <Grid.Column>
-            <h4>FROM { URL ? <a href={URL}>(Faucet)</a> : <></> } </h4>
+            <h4>FROM {URL ? <a href={URL}>(Faucet)</a> : <></>} </h4>
             <Dropdown
               placeholder='Select origin chain'
               options={chainOptions} fluid selection
@@ -181,13 +193,21 @@ const SendMessage = () => {
         <>
           <h3>Read Hello World Contracts</h3>
           <Grid centered divided='vertically' textAlign='center'>
-            <Grid.Row centered columns={2} textAlign='center'>
+            <Grid.Row centered columns={3} textAlign='center'>
               <Grid.Column>
                 <Dropdown
                   placeholder='Select network to read'
                   options={chainOptions} fluid selection
                   onChange={(_, data) => setNetworkToRead(data?.value as number)}
                   value={networkToRead}
+                />
+              </Grid.Column>
+              <Grid.Column>
+                <Dropdown
+                  placeholder='Select protocol'
+                  options={protocolOptions} fluid selection
+                  onChange={(_, data) => setProtocolToRead(data?.value as string)}
+                  value={protocol}
                 />
               </Grid.Column>
               <Grid.Column>

@@ -1,9 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import { useContractFunction } from '@usedapp/core';
+import {
+  MoonbaseAlpha, FantomTestnet, AvalancheTestnet, Mumbai,
+  useContractFunction, Params, Chain
+} from '@usedapp/core';
 import { ContractFunctionNames, Falsy, TransactionOptions, TransactionStatus, TypedContract } from '@usedapp/core/dist/esm/src/model';
 import { AxelarGMPRecoveryAPI, Environment, GMPStatus, GMPStatusResponse, AxelarQueryAPI } from '@axelar-network/axelarjs-sdk';
 import { TransactionReceipt } from '@ethersproject/abstract-provider';
 import TransactionState from '../TransactionState';
+import { LogDescription } from 'ethers/lib/utils';
+import ConnectedContractModule from '../ConnectedContractModule';
+import addresses from './addresses';
 
 export enum AxelarTransactionState {
   'None',
@@ -20,12 +26,20 @@ export enum AxelarTransactionState {
  * Extends usedapp's useContractFunction by expecting Axelar related
  * functionality.
  */
-export default function useAxelarFunction
+export function useAxelarFunction
   <T extends TypedContract, FN extends ContractFunctionNames<T>>(
     contract: T | Falsy,
     functionName: FN,
     options?: TransactionOptions
-  ) {
+  ): {
+    originState: TransactionStatus,
+    send: (...args: Params<T, FN>) => Promise<TransactionReceipt | undefined>,  // todo
+    originEvents: LogDescription[],
+    resetState: () => void,
+    transactionState: TransactionState,
+    gmp?: any,
+    state?: any
+  } {
   const { state, send, events, resetState } = useContractFunction(contract, functionName, options);
   let [entireState, setEntireState] = useState<AxelarTransactionState>(AxelarTransactionState.None);
   let [gmp, setGMP] = useState<GMPStatusResponse>(null);
@@ -133,4 +147,10 @@ export default function useAxelarFunction
     gmp,
     transactionState
   };
+}
+
+export default class AxelarModule extends ConnectedContractModule {
+  chains: Chain[] = [MoonbaseAlpha, FantomTestnet, AvalancheTestnet, Mumbai];
+  addresses: { [x: number]: string } = addresses;
+  useCrossChainFunction = useAxelarFunction;
 }
