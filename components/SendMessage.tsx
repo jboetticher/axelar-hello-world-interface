@@ -6,31 +6,16 @@ import {
 } from '@usedapp/core';
 import { utils } from 'ethers';
 import { Contract } from '@ethersproject/contracts';
-import HelloWorldABI from '../ethereum/abi/HelloWorldMessage.json';
-import { AxelarQueryAPI, Environment, EvmChain } from '@axelar-network/axelarjs-sdk';
-import { tokenName } from '../ethereum/axelar/axelarHelpers';
-import AxelarModule from '../ethereum/axelar/AxelarModule';
+import AxelarModule, { chainIdToAxelar } from '../ethereum/axelar/AxelarModule';
+import HyperlaneModule from '../ethereum/hyperlane/HyperlaneModule';
 import ConnectedContractModule from '../ethereum/ConnectedContractModule';
+import { TransactionReceipt } from '@ethersproject/abstract-provider';
 
-/**
- * Converts a chainId to a string that Axelar's contract can interpet
- * @param chainId The chain ID of the chain you want to send to.
- * @returns The name of a chain that Axelar can interprets
- */
-function chainIdToAxelar(chainId): EvmChain {
-  switch (chainId) {
-    case MoonbaseAlpha.chainId: return EvmChain.MOONBEAM;
-    case FantomTestnet.chainId: return EvmChain.FANTOM;
-    case AvalancheTestnet.chainId: return EvmChain.AVALANCHE;
-    case Mumbai.chainId: return EvmChain.POLYGON;
-  }
-  throw new Error(`Chain ${chainId} is not supported!`);
-}
 /**
  * Converts a chainId to a faucet URL
  * @param chainId The chain ID of the chain you want to send to.
  */
-function chainIdToFaucet(chainId): string {
+ function chainIdToFaucet(chainId): string {
   switch (chainId) {
     case MoonbaseAlpha.chainId: return "https://apps.moonbeam.network/moonbase-alpha/faucet/";
     case FantomTestnet.chainId: return "https://faucet.fantom.network/";
@@ -39,6 +24,7 @@ function chainIdToFaucet(chainId): string {
     default: return null;
   }
 }
+
 const EMPTY_ADDRESS = '0x9999999999999999999999999999999999999999';
 
 /*
@@ -63,7 +49,7 @@ const SendMessage = () => {
     { key: 2, value: "layerzero", text: "Layer Zero", image: { avatar: true, src: './logos/layerzero.png' } },
   ];
   const [protocol, setProtocol] = useState<string>(protocolOptions[0].value as string);
-  const modules = { axelar: new AxelarModule(), hyperlane: new AxelarModule(), layerzero: new AxelarModule() };
+  const modules = { axelar: new AxelarModule(), hyperlane: new HyperlaneModule(), layerzero: new AxelarModule() };
   const currentModule: ConnectedContractModule = modules[protocol ?? protocolOptions[0].value as string];
 
   // Set up network options
@@ -72,7 +58,7 @@ const SendMessage = () => {
   chains.forEach(c => {
     chainOptions.push({ key: c.chainId, value: c.chainId, text: c.chainName, image: { avatar: true, src: `./logos/${c.chainName}.png` } });
   });
-  const URL = chainIdToFaucet(chainId);
+  const faucetURL = chainIdToFaucet(chainId);
 
   // Basic form error handling
   useEffect(() => {
@@ -82,7 +68,7 @@ const SendMessage = () => {
   const formIsValidated = destination != null && chainId != null && formError == '' && message != '' && message != null;
 
   // Submit transaction
-  const helloWorldInterface = new utils.Interface(HelloWorldABI);
+  const helloWorldInterface = new utils.Interface(currentModule.abi);
   const contract = new Contract(currentModule.addresses[chainId ?? 0] ?? EMPTY_ADDRESS, helloWorldInterface);
   const { originState, send, transactionState, resetState } = currentModule.useCrossChainFunction(contract, 'sendMessage', { transactionName: 'Send Message' });
   async function sendTransaction() {
@@ -91,17 +77,19 @@ const SendMessage = () => {
     setIsPending(true);
 
     // Calculate potential cross-chain gas fee
-    const axlearSDK = new AxelarQueryAPI({ environment: Environment.TESTNET });
-    const estimateGasUsed = 200000;
-    const crossChainGasFee = await axlearSDK.estimateGasFee(
-      chainIdToAxelar(chainId),
-      chainIdToAxelar(destination),
-      tokenName(chainId),
-      estimateGasUsed
-    );
+    const crossChainGasFee = await currentModule.calculateNativeGasFee(chainId, destination);
 
-    // Send transaction
-    const txReceipt = await send(message, currentModule.addresses[destination], chainIdToAxelar(destination), { value: crossChainGasFee });
+    // Send transaction. Not sure how best to modularize this since there will be different inputs for each implementation
+    let txReceipt: TransactionReceipt;
+    switch(protocolOptions[0].value) {
+      case 'axelar':
+        txReceipt = await send(message, currentModule.addresses[destination], chainIdToAxelar(destination), { value: crossChainGasFee });
+        break;
+      case 'hyperlane':
+        break;
+      case 'layerzero':
+        break;
+    }
   }
 
   // Handle message reading from multiple chains
@@ -141,7 +129,7 @@ const SendMessage = () => {
             />
           </Grid.Column>
           <Grid.Column>
-            <h4>FROM {URL ? <a href={URL}>(Faucet)</a> : <></>} </h4>
+            <h4>FROM {faucetURL ? <a href={faucetURL}>(Faucet)</a> : <></>} </h4>
             <Dropdown
               placeholder='Select origin chain'
               options={chainOptions} fluid selection

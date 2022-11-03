@@ -9,9 +9,8 @@ import { TransactionReceipt } from '@ethersproject/abstract-provider';
 import TransactionState from '../TransactionState';
 import { LogDescription } from 'ethers/lib/utils';
 import ConnectedContractModule from '../ConnectedContractModule';
-import addresses from './addresses';
-import abi from './AxelarHelloWorldMessage.json';
-import { tokenName } from './axelarHelpers';
+import abi from './HyperlaneHelloWorldMessage.json';
+import { tokenName } from '../axelar/axelarHelpers';
 
 export enum AxelarTransactionState {
   'None',
@@ -22,6 +21,11 @@ export enum AxelarTransactionState {
   'DestinationPending',
   'DestinationError',
   'Success'
+};
+
+const addresses = {
+  [MoonbaseAlpha.chainId]: "0xDedC95A31c0a04175CeB9d31Da505D4592e2C1f3",
+  [AvalancheTestnet.chainId]: "0xaf108eF646c8214c9DD9C13CBC5fadf964Bbe293"
 };
 
 /**
@@ -181,6 +185,6 @@ export default class AxelarModule extends ConnectedContractModule {
   abi = abi;
   addresses: { [x: number]: string } = addresses;
   calculateNativeGasFee = calculateAxelarGasFee;
-  chains: Chain[] = [MoonbaseAlpha, FantomTestnet, AvalancheTestnet, Mumbai];
+  chains: Chain[] = [MoonbaseAlpha, AvalancheTestnet];
   useCrossChainFunction = useAxelarFunction;
 }

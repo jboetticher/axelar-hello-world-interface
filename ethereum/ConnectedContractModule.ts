@@ -3,6 +3,7 @@ import { ContractFunctionNames, Falsy, TransactionOptions, TransactionStatus, Ty
 import { TransactionReceipt } from '@ethersproject/abstract-provider';
 import { Params } from '@usedapp/core';
 import { LogDescription } from 'ethers/lib/utils';
+import { Fragment, JsonFragment } from '@ethersproject/abi'
 import TransactionState from "./TransactionState";
 
 abstract class ConnectedContractModule {
@@ -15,6 +16,11 @@ abstract class ConnectedContractModule {
    * The addresses of the deployed connected contracts in this provider (this is a peer-to-peer project)
    */
   abstract addresses: {[x: number]: string};
+
+  /**
+   * The abi specific to the connected contract protocol.
+   */
+  abstract abi: string | ReadonlyArray<Fragment | JsonFragment | string>;
 
   /**
    * An extension of useDapp's useContractFunction that also monitors the cross-chain transaction state
@@ -32,5 +38,10 @@ abstract class ConnectedContractModule {
     gmp?: any,
     state?: any
   };
+
+  /**
+   * A function that calculates the gas fee
+   */
+  abstract calculateNativeGasFee: (originId: number, destinationId: number) => Promise<string>;
 }
 export default ConnectedContractModule;
