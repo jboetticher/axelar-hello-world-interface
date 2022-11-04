@@ -24,6 +24,11 @@ abstract class ConnectedContractModule {
 
   /**
    * An extension of useDapp's useContractFunction that also monitors the cross-chain transaction state
+   * 
+   * @dev NOTE: as it currently stands, the system relies on an antipattern of conditionally using react hooks. This
+   * breaks the rules of React hooks, but the system will not throw an error until hook order has been changed. Thus,
+   * to implement this hook, the order of hooks MUST be: useContractFunction, useState, useState, useState, useEffect.
+   * @todo Replace antipattern with a better hook that is generalized
    */
   abstract useCrossChainFunction: <T extends TypedContract, FN extends ContractFunctionNames<T>>(
     contract: T | Falsy,

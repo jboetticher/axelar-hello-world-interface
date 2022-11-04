@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import {
-  MoonbaseAlpha, FantomTestnet, AvalancheTestnet, Mumbai,
+  MoonbaseAlpha, BSCTestnet, AvalancheTestnet, Mumbai,
   useContractFunction, Params, Chain
 } from '@usedapp/core';
 import { ContractFunctionNames, Falsy, TransactionOptions, TransactionStatus, TypedContract } from '@usedapp/core/dist/esm/src/model';
@@ -11,13 +11,29 @@ import { LogDescription } from 'ethers/lib/utils';
 import ConnectedContractModule from '../ConnectedContractModule';
 import abi from './HyperlaneHelloWorldMessage.json';
 import { tokenName } from '../axelar/axelarHelpers';
+import { HyperlaneCore, MultiProvider, objMap, chainConnectionConfigs, DispatchedMessage } from '@hyperlane-xyz/sdk';
+import { Wallet } from 'ethers';
 
-export enum AxelarTransactionState {
+const prodConfigs = {
+  moonbasealpha: chainConnectionConfigs.moonbasealpha,
+  mumbai: chainConnectionConfigs.mumbai,
+  fuji: chainConnectionConfigs.fuji
+};
+// const signer = new Wallet(process.env.PRIVATE_KEY as string);
+const chainProviders = objMap(prodConfigs, (_, config) => ({
+  provider: config.provider,
+  confirmations: config.confirmations,
+  overrides: config.overrides,
+  //signer: signer.connect(config.provider)
+}));
+const multiProvider = new MultiProvider(chainProviders);
+const core = HyperlaneCore.fromEnvironment('testnet2', multiProvider);
+
+export enum HyperlaneTransactionState {
   'None',
   'OriginPending',
   'OriginError',
-  'AxelarPending',
-  'AxelarError',
+  'HyperlanePending',
   'DestinationPending',
   'DestinationError',
   'Success'
@@ -32,7 +48,7 @@ const addresses = {
  * Extends usedapp's useContractFunction by expecting Axelar related
  * functionality.
  */
-export function useAxelarFunction
+export function useHyperlaneFunction
   <T extends TypedContract, FN extends ContractFunctionNames<T>>(
     contract: T | Falsy,
     functionName: FN,
@@ -47,102 +63,114 @@ export function useAxelarFunction
     state?: any
   } {
   const { state, send, events, resetState } = useContractFunction(contract, functionName, options);
-  let [entireState, setEntireState] = useState<AxelarTransactionState>(AxelarTransactionState.None);
-  let [gmp, setGMP] = useState<GMPStatusResponse>(null);
+  const [entireState, setEntireState] = useState<HyperlaneTransactionState>(HyperlaneTransactionState.None);
+  const [crossChainMessages, setCrossChainMessages] = useState<DispatchedMessage[] | undefined>(undefined);
+  const [destTxHash, setDestTxHash] = useState<string>("");
 
   // Rename to origin state
   const originState: TransactionStatus = state;
 
-  // Watch state to ensure we're setting the right status
+  // Watch origin state to ensure we're setting the right status
   useEffect(() => {
-    // State switch to AxelarPending
+    // State switch to HyperlanePending
     if (originState.status == 'Mining') {
-      setEntireState(AxelarTransactionState.OriginPending);
+      setEntireState(HyperlaneTransactionState.OriginPending);
     }
-    else if (originState.status == 'Success' && entireState === AxelarTransactionState.OriginPending) {
-      setEntireState(AxelarTransactionState.AxelarPending);
+    else if (originState.status == 'Success' && entireState === HyperlaneTransactionState.OriginPending) {
+      setEntireState(HyperlaneTransactionState.HyperlanePending);
 
-      // Begin coroutine to check Axelar status
-      beginAxelarStatusCheck();
+      // Begin coroutine to check message received status
+      beginStatusCheck(state.receipt);
     }
     else if (originState.status == 'Exception' || originState.status == 'Fail') {
-      setEntireState(AxelarTransactionState.OriginError);
+      setEntireState(HyperlaneTransactionState.OriginError);
     }
   }, [originState]);
 
-  // Update Axelar status every 5 seconds
-  async function beginAxelarStatusCheck() {
-    const sdk = new AxelarGMPRecoveryAPI({ environment: Environment.TESTNET });
-
+  // Update status every 3 seconds
+  async function beginStatusCheck(txReceipt: TransactionReceipt) {
+    let waitForDest = false;
     while (1) {
+
       if (originState.transaction.hash == null) {
-        setEntireState(AxelarTransactionState.OriginError);
+        setEntireState(HyperlaneTransactionState.OriginError);
         break;
       }
-      else if (entireState == AxelarTransactionState.None) {
+      else if (entireState == HyperlaneTransactionState.None) {
         // Can occur if function is reset, in which case we shouldn't be querying anymore
         break;
       }
 
-      const gmpRes = await sdk.queryTransactionStatus(originState.transaction?.hash);
-      setGMP(gmpRes);
+      console.log(entireState, HyperlaneTransactionState.HyperlanePending, entireState < HyperlaneTransactionState.HyperlanePending);
 
-      if (gmpRes.status == GMPStatus.CANNOT_FETCH_STATUS) {
-        setEntireState(AxelarTransactionState.AxelarError);
+      if(!waitForDest) {
+        const dispatched = core.getDispatchedMessages(state.receipt);
+        setCrossChainMessages(dispatched);
+  
+        if(dispatched != null && dispatched.length > 0) {
+          setEntireState(HyperlaneTransactionState.DestinationPending);
+          waitForDest = true;
+        }
       }
-      else if (gmpRes.status == GMPStatus.DEST_EXECUTE_ERROR) {
-        setEntireState(AxelarTransactionState.DestinationError);
-      }
-      else if (gmpRes.status == GMPStatus.DEST_GATEWAY_APPROVED) {
-        setEntireState(AxelarTransactionState.DestinationPending);
-      }
-      else if (gmpRes.status == GMPStatus.DEST_EXECUTED) {
-        setEntireState(AxelarTransactionState.Success);
+
+      if(waitForDest) {
+        console.log("starting to wait for message processing");
+        const destStatus = await core.waitForMessageProcessing(txReceipt);
+
+        if(destStatus.length <= 0) setEntireState(HyperlaneTransactionState.DestinationError);
+        else {
+          const destReceipt = destStatus[0];
+          setDestTxHash(destReceipt.transactionHash);
+          if(destReceipt.status == 1) setEntireState(HyperlaneTransactionState.Success);
+          else setEntireState(HyperlaneTransactionState.DestinationError);
+        }
+        console.log(destStatus);
         break;
       }
 
       // Await for five seconds
-      await new Promise((resolve, _) => setTimeout(resolve, 5000));
+      await new Promise((resolve, _) => setTimeout(resolve, 3000));
     }
   }
 
   // Replaces the previous reset state to update every state
   function newResetState() {
-    setEntireState(AxelarTransactionState.None);
-    setGMP(null);
+    setEntireState(HyperlaneTransactionState.None);
     resetState();
   }
 
   // In case changing the function is required in the future. Doesn't do anything now
   function newSend(...args: Parameters<T["functions"][FN]>): Promise<TransactionReceipt> {
+    console.log('beginning hyperlane send');
     return send(...args);
   }
 
-  const axelarStateIsError =
-    entireState == AxelarTransactionState.OriginError ||
-    entireState == AxelarTransactionState.AxelarError ||
-    entireState == AxelarTransactionState.DestinationError;
-  const isLoading = (
-    entireState != AxelarTransactionState.None &&
-    entireState != AxelarTransactionState.Success &&
-    !axelarStateIsError);
-  const originTxState = entireState == AxelarTransactionState.None ? '---' :
-    entireState == AxelarTransactionState.OriginError ? 'ERROR' :
-      entireState == AxelarTransactionState.OriginPending ? 'PENDING' : 'SUCCESS';
-  const axelarTxState = gmp == null ? '---' :
-    entireState == AxelarTransactionState.AxelarError ? 'ERROR' :
-      entireState == AxelarTransactionState.AxelarPending ? 'PENDING' : 'SUCCESS';
-  const destTxState = gmp == null || entireState < AxelarTransactionState.DestinationPending ? '---' :
-    entireState == AxelarTransactionState.DestinationError ? 'ERROR' :
-      entireState == AxelarTransactionState.DestinationPending ? 'PENDING' : 'SUCCESS';
+  const stateIsError =
+    entireState == HyperlaneTransactionState.OriginError ||
+    entireState == HyperlaneTransactionState.DestinationError;
+  const isLoading = 
+    entireState != HyperlaneTransactionState.None &&
+    entireState != HyperlaneTransactionState.Success &&
+    !stateIsError;
+  const originTxState = entireState == HyperlaneTransactionState.None ? '---' :
+    entireState == HyperlaneTransactionState.OriginError ? 'ERROR' :
+      entireState == HyperlaneTransactionState.OriginPending ? 'PENDING' : 'SUCCESS';
+  const hyperlaneState = crossChainMessages == null ? '---' : 
+    crossChainMessages.length == 0 ? 'PENDING' : 'SUCCESS';
+  const destTxState = entireState < HyperlaneTransactionState.DestinationPending ? '---' : 
+    entireState == HyperlaneTransactionState.DestinationError ? 'ERROR' :
+    entireState == HyperlaneTransactionState.DestinationPending ? 'PENDING' : 'SUCCESS';
+
   const transactionState: TransactionState = {
-    errorState: axelarStateIsError,
+    errorState: stateIsError,
     isLoading,
     hasMiddleman: true,
     originTxState,
-    middlemanTxState: axelarTxState,
-    destTxState
+    middlemanTxState: hyperlaneState,
+    destTxState,
+    destTxHash
   }
+  console.log(entireState, transactionState);
 
   return {
     originState,
@@ -150,41 +178,34 @@ export function useAxelarFunction
     originEvents: events,
     resetState: newResetState,
     state: entireState,
-    gmp,
     transactionState
   };
 }
 
 /**
- * Converts a chainId to a string that Axelar's contract can interpet
+ * Converts a chainId to a Hyperlane domain
  * @param chainId The chain ID of the chain you want to send to.
  * @returns The name of a chain that Axelar can interprets
  */
-export function chainIdToAxelar(chainId: number): EvmChain {
+export function chainIdToHyperlane(chainId: number): number {
   switch (chainId) {
-    case MoonbaseAlpha.chainId: return EvmChain.MOONBEAM;
-    case FantomTestnet.chainId: return EvmChain.FANTOM;
-    case AvalancheTestnet.chainId: return EvmChain.AVALANCHE;
-    case Mumbai.chainId: return EvmChain.POLYGON;
+    case MoonbaseAlpha.chainId: return 0x6d6f2d61;
+    case AvalancheTestnet.chainId: return 43113;
+    case Mumbai.chainId: return 80001;
+    case BSCTestnet.chainId: return 0x62732d74;
   }
   throw new Error(`Chain ${chainId} is not supported!`);
 }
 
 export async function calculateAxelarGasFee(originId: number, destinationId: number) {
-  const axelarSDK = new AxelarQueryAPI({ environment: Environment.TESTNET });
-  const estimateGasUsed = 200000;
-  return await axelarSDK.estimateGasFee(
-    chainIdToAxelar(originId),
-    chainIdToAxelar(destinationId),
-    tokenName(originId),
-    estimateGasUsed
-  );
+  // TODO: replace with SDK
+  return "100000000000000000";
 }
 
-export default class AxelarModule extends ConnectedContractModule {
+export default class HyperlaneModule extends ConnectedContractModule {
   abi = abi;
   addresses: { [x: number]: string } = addresses;
   calculateNativeGasFee = calculateAxelarGasFee;
   chains: Chain[] = [MoonbaseAlpha, AvalancheTestnet];
-  useCrossChainFunction = useAxelarFunction;
+  useCrossChainFunction = useHyperlaneFunction;
 }

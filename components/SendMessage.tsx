@@ -10,6 +10,7 @@ import AxelarModule, { chainIdToAxelar } from '../ethereum/axelar/AxelarModule';
 import HyperlaneModule from '../ethereum/hyperlane/HyperlaneModule';
 import ConnectedContractModule from '../ethereum/ConnectedContractModule';
 import { TransactionReceipt } from '@ethersproject/abstract-provider';
+import { chainIdToHyperlane } from '../ethereum/hyperlane/HyperlaneModule';
 
 /**
  * Converts a chainId to a faucet URL
@@ -70,7 +71,8 @@ const SendMessage = () => {
   // Submit transaction
   const helloWorldInterface = new utils.Interface(currentModule.abi);
   const contract = new Contract(currentModule.addresses[chainId ?? 0] ?? EMPTY_ADDRESS, helloWorldInterface);
-  const { originState, send, transactionState, resetState } = currentModule.useCrossChainFunction(contract, 'sendMessage', { transactionName: 'Send Message' });
+  const { originState, send, transactionState, resetState } = currentModule
+    .useCrossChainFunction(contract, 'sendMessage', { transactionName: 'Send Message' });
   async function sendTransaction() {
     // Reset state
     resetState();
@@ -81,11 +83,12 @@ const SendMessage = () => {
 
     // Send transaction. Not sure how best to modularize this since there will be different inputs for each implementation
     let txReceipt: TransactionReceipt;
-    switch(protocolOptions[0].value) {
+    switch(protocol) {
       case 'axelar':
         txReceipt = await send(message, currentModule.addresses[destination], chainIdToAxelar(destination), { value: crossChainGasFee });
         break;
       case 'hyperlane':
+        txReceipt = await send(chainIdToHyperlane(destination), message, { value: crossChainGasFee });
         break;
       case 'layerzero':
         break;
@@ -95,16 +98,31 @@ const SendMessage = () => {
   // Handle message reading from multiple chains
   const [networkToRead, setNetworkToRead] = useState<number>(MoonbaseAlpha.chainId);
   const [protocolToRead, setProtocolToRead] = useState<string>('axelar');
+  const chainReadOptions: DropdownItemProps[] = [];
+  const readChains: Chain[] = modules[protocolToRead ?? protocolOptions[0].value as string].chains;
+  readChains.forEach(c => {
+    chainReadOptions.push({ key: c.chainId, value: c.chainId, text: c.chainName, image: { avatar: true, src: `./logos/${c.chainName}.png` } });
+  });
   const readContract = new Contract(modules[protocolToRead].addresses[networkToRead], helloWorldInterface);
   const call = useCall({ contract: readContract, method: 'lastMessage', args: [account ?? EMPTY_ADDRESS] }, { chainId: networkToRead });
-  console.log(modules[protocolToRead].addresses[networkToRead], call, { contract: readContract, method: 'lastMessage', args: [account ?? EMPTY_ADDRESS] }, { chainId: networkToRead });
   const lastMessage: string = call?.value?.[0];
 
+  // Ensure that no incorrect chain is read
+  function changeProtocolToRead(protocol: string) {
+    setProtocolToRead(protocol);
+  }
+  useEffect(() => {
+    if(modules[protocolToRead].addresses[protocolToRead] == null) {
+      const moduleToRead: ConnectedContractModule = modules[protocolToRead] as ConnectedContractModule;
+      setNetworkToRead(moduleToRead.chains[0].chainId);
+    }
+  }, [protocolToRead]);
 
+
+  // Handle pending button & loading status
   useEffect(() => {
     if (originState.status != 'None' && originState.status != 'PendingSignature') setIsPending(false);
   }, [originState.status]);
-
   const buttonIsLoading = transactionState.isLoading || isPending;
 
   return (
@@ -165,12 +183,13 @@ const SendMessage = () => {
             <p className='wrp'>{transactionState.originTxState}</p>
           </Grid.Column>
           <Grid.Column>
-            <h4>Axelar Status</h4>
+            <h4>Protocol Status</h4>
             <p className='wrp'>{originState?.transaction?.hash}</p>
             <p className='wrp'>{transactionState.middlemanTxState}</p>
           </Grid.Column>
           <Grid.Column>
             <h4>{chains.find(x => x.chainId === destination)?.chainName} Status</h4>
+            {transactionState.destTxHash && <p className='wrp'>{transactionState.destTxHash}</p>}
             <p className='wrp'>{transactionState.destTxState}</p>
           </Grid.Column>
         </Grid.Row>
@@ -185,7 +204,7 @@ const SendMessage = () => {
               <Grid.Column>
                 <Dropdown
                   placeholder='Select network to read'
-                  options={chainOptions} fluid selection
+                  options={chainReadOptions} fluid selection
                   onChange={(_, data) => setNetworkToRead(data?.value as number)}
                   value={networkToRead}
                 />
@@ -194,8 +213,8 @@ const SendMessage = () => {
                 <Dropdown
                   placeholder='Select protocol'
                   options={protocolOptions} fluid selection
-                  onChange={(_, data) => setProtocolToRead(data?.value as string)}
-                  value={protocol}
+                  onChange={(_, data) => changeProtocolToRead(data?.value as string)}
+                  value={protocolToRead}
                 />
               </Grid.Column>
               <Grid.Column>
