@@ -107,6 +107,7 @@ export function useAxelarFunction
   function newResetState() {
     setEntireState(AxelarTransactionState.None);
     setGMP(null);
+    setDestTx(null);
     resetState();
   }
 

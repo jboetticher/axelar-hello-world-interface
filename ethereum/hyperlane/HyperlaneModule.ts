@@ -136,6 +136,8 @@ export function useHyperlaneFunction
   // Replaces the previous reset state to update every state
   function newResetState() {
     setEntireState(HyperlaneTransactionState.None);
+    setCrossChainMessages(undefined);
+    setDestTxHash("");
     resetState();
   }
 
