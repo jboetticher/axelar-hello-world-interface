@@ -28,7 +28,9 @@ abstract class ConnectedContractModule {
    * @dev NOTE: as it currently stands, the system relies on an antipattern of conditionally using react hooks. This
    * breaks the rules of React hooks, but the system will not throw an error until hook order has been changed. Thus,
    * to implement this hook, the order of hooks MUST be: useContractFunction, useState, useState, useState, useEffect.
-   * @todo Replace antipattern with a better hook that is generalized
+   *
+   * @todo Replace antipattern with a context-based system that injects state functions so that components are modular 
+   * instead of relying only on hooks
    */
   abstract useCrossChainFunction: <T extends TypedContract, FN extends ContractFunctionNames<T>>(
     contract: T | Falsy,
