@@ -1,6 +1,6 @@
 import './styles.css'
 import { DAppProvider, Config, MoonbaseAlpha, FantomTestnet, AvalancheTestnet, Mumbai, Chain } from '@usedapp/core';
-import { getDefaultProvider } from 'ethers';
+import { ConnectedContractContextProvider } from '../components/ConnectedContractContext';
 
 // https://github.com/TrueFiEng/useDApp/blob/master/packages/example-next/providers/Providers.tsx
 export const config: Config = {
@@ -22,7 +22,9 @@ export const config: Config = {
 export default function MyApp({ Component, pageProps }) {
   return (
     <DAppProvider config={config}>
-      <Component {...pageProps} />
+      <ConnectedContractContextProvider>
+        <Component {...pageProps} />
+      </ConnectedContractContextProvider>
     </DAppProvider>
   )
 }

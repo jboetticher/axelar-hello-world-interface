@@ -31,6 +31,11 @@ abstract class ConnectedContractModule {
    *
    * @todo Replace antipattern with a context-based system that injects state functions so that components are modular 
    * instead of relying only on hooks
+   * 
+   * The idea is to:
+   * 1. Put all of the data that would be returned by useCrossChainFunction into a context object
+   * 2. Replace this abstract hook with a component that can be conditionally rendered
+   * 3. The component that is conditionally rendered will set the context
    */
   abstract useCrossChainFunction: <T extends TypedContract, FN extends ContractFunctionNames<T>>(
     contract: T | Falsy,
