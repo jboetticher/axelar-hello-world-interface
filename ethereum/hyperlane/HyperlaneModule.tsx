@@ -1,18 +1,16 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import {
   MoonbaseAlpha, BSCTestnet, AvalancheTestnet, Mumbai,
   useContractFunction, Params, Chain
 } from '@usedapp/core';
 import { ContractFunctionNames, Falsy, TransactionOptions, TransactionStatus, TypedContract } from '@usedapp/core/dist/esm/src/model';
-import { AxelarGMPRecoveryAPI, Environment, GMPStatus, GMPStatusResponse, AxelarQueryAPI, EvmChain } from '@axelar-network/axelarjs-sdk';
 import { TransactionReceipt } from '@ethersproject/abstract-provider';
 import TransactionState from '../TransactionState';
 import { LogDescription } from 'ethers/lib/utils';
 import ConnectedContractModule from '../ConnectedContractModule';
 import abi from './HyperlaneHelloWorldMessage.json';
-import { tokenName } from '../axelar/axelarHelpers';
 import { HyperlaneCore, MultiProvider, objMap, chainConnectionConfigs, DispatchedMessage } from '@hyperlane-xyz/sdk';
-import { Wallet } from 'ethers';
+import CrossChainFunctionContext from '../../components/ConnectedContractContext';
 
 const prodConfigs = {
   moonbasealpha: chainConnectionConfigs.moonbasealpha,
@@ -204,7 +202,27 @@ export async function calculateAxelarGasFee(originId: number, destinationId: num
   return "100000000000000000";
 }
 
+
+const HyperlaneConfigurerComponent = ({ contract, functionName }): JSX.Element => {
+  const { data, setData } = useContext(CrossChainFunctionContext);
+
+  // useAxelarFunction for functionality
+  const items = useHyperlaneFunction(contract, functionName);
+
+  // Set data from the useHyperlaneFunction
+  useEffect(() => {
+    setData(items);
+    console.log(items.state)
+  }, [items.state]);
+
+  return (
+    <div>
+    </div>
+  );
+}
+
 export default class HyperlaneModule extends ConnectedContractModule {
+  CrossChainConfigurer = HyperlaneConfigurerComponent;
   abi = abi;
   addresses: { [x: number]: string } = addresses;
   calculateNativeGasFee = calculateAxelarGasFee;

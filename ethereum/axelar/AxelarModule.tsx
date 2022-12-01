@@ -181,7 +181,7 @@ export async function calculateAxelarGasFee(originId: number, destinationId: num
 }
 
 const AxelarConfigurerComponent = ({ contract, functionName }): JSX.Element => {
-  const { data, setData } = useContext(CrossChainFunctionContext);
+  const { setData } = useContext(CrossChainFunctionContext);
 
   // useAxelarFunction for functionality
   const items = useAxelarFunction(contract, functionName);
@@ -189,7 +189,8 @@ const AxelarConfigurerComponent = ({ contract, functionName }): JSX.Element => {
   // Set data from the useAxelarFunction
   useEffect(() => {
     setData(items);
-  }, [items]);
+    console.log(items.state)
+  }, [items.state]);
 
   return (
     <div>
