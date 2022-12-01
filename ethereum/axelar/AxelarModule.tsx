@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import {
   MoonbaseAlpha, FantomTestnet, AvalancheTestnet, Mumbai,
   useContractFunction, Params, Chain
@@ -12,6 +12,7 @@ import ConnectedContractModule from '../ConnectedContractModule';
 import addresses from './addresses';
 import abi from './AxelarHelloWorldMessage.json';
 import { tokenName } from './axelarHelpers';
+import CrossChainFunctionContext from '../../components/ConnectedContractContext';
 
 export enum AxelarTransactionState {
   'None',
@@ -179,7 +180,25 @@ export async function calculateAxelarGasFee(originId: number, destinationId: num
   );
 }
 
+const AxelarConfigurerComponent = ({ contract, functionName }): JSX.Element => {
+  const { data, setData } = useContext(CrossChainFunctionContext);
+
+  // useAxelarFunction for functionality
+  const items = useAxelarFunction(contract, functionName);
+
+  // Set data from the useAxelarFunction
+  useEffect(() => {
+    setData(items);
+  }, [items]);
+
+  return (
+    <div>
+    </div>
+  );
+}
+
 export default class AxelarModule extends ConnectedContractModule {
+  CrossChainConfigurer = AxelarConfigurerComponent;
   abi = abi;
   addresses: { [x: number]: string } = addresses;
   calculateNativeGasFee = calculateAxelarGasFee;

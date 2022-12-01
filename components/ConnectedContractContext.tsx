@@ -4,6 +4,7 @@ import { TransactionReceipt } from '@ethersproject/abstract-provider';
 import { LogDescription } from 'ethers/lib/utils';
 import TransactionState from "../ethereum/TransactionState";
 import { createContext, useState } from 'react';
+import AxelarModule from "../ethereum/axelar/AxelarModule";
 
 type CrossChainFunctionContextData = {
     originState: TransactionStatus,
@@ -22,7 +23,7 @@ const CrossChainFunctionContext = createContext<{
 
 export const ConnectedContractContextProvider = ({ children }) => {
     // the value that will be given to the context
-    const [contextData, setContextData] = useState<CrossChainFunctionContextData | undefined>(undefined);
+    const [contextData, setContextData] = useState<CrossChainFunctionContextData | undefined>();
 
     return (
         // the Provider gives access to the context to its children

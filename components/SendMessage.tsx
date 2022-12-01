@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import { Button, Dropdown, DropdownItemProps, Grid, Input } from 'semantic-ui-react';
 import {
   Chain, MoonbaseAlpha, FantomTestnet, AvalancheTestnet, Mumbai,
@@ -11,6 +11,7 @@ import HyperlaneModule from '../ethereum/hyperlane/HyperlaneModule';
 import ConnectedContractModule from '../ethereum/ConnectedContractModule';
 import { TransactionReceipt } from '@ethersproject/abstract-provider';
 import { chainIdToHyperlane } from '../ethereum/hyperlane/HyperlaneModule';
+import ConnectedContractContext from './ConnectedContractContext';
 
 /**
  * Converts a chainId to a faucet URL
@@ -52,6 +53,7 @@ const SendMessage = () => {
   const [protocol, setProtocol] = useState<string>(protocolOptions[0].value as string);
   const modules = { axelar: new AxelarModule(), hyperlane: new HyperlaneModule(), layerzero: new AxelarModule() };
   const currentModule: ConnectedContractModule = modules[protocol ?? protocolOptions[0].value as string];
+  const { data: connectedContractContext, setData: setConnectedContractContext } = useContext(ConnectedContractContext);
 
   // Set up network options
   const chains: Chain[] = currentModule.chains;
@@ -71,8 +73,8 @@ const SendMessage = () => {
   // Submit transaction
   const helloWorldInterface = new utils.Interface(currentModule.abi);
   const contract = new Contract(currentModule.addresses[chainId ?? 0] ?? EMPTY_ADDRESS, helloWorldInterface);
-  const { originState, send, transactionState, resetState } = currentModule
-    .useCrossChainFunction(contract, 'sendMessage', { transactionName: 'Send Message' });
+  const CrossChainConfigurer = currentModule.CrossChainConfigurer({ contract, functionName: 'sendMessage' });
+  const { originState, send, transactionState, resetState } = connectedContractContext ?? { originState: undefined, send: undefined, transactionState: undefined, resetState: undefined };
   async function sendTransaction() {
     // Reset state
     resetState();
@@ -81,7 +83,11 @@ const SendMessage = () => {
     // Calculate potential cross-chain gas fee
     const crossChainGasFee = await currentModule.calculateNativeGasFee(chainId, destination);
 
-    // Send transaction. Not sure how best to modularize this since there will be different inputs for each implementation
+    // Send transaction
+    // Not sure how best to modularize this since there will be different inputs for each implementation. 
+    //    You could ensure that it's the same input in the smart contract, but you'll need some way of adapting for each protocol
+    //    You could also put that adpater into the module, but... that's extra work
+    //    For now it's just a switch
     let txReceipt: TransactionReceipt;
     switch(protocol) {
       case 'axelar':
@@ -121,9 +127,9 @@ const SendMessage = () => {
 
   // Handle pending button & loading status
   useEffect(() => {
-    if (originState.status != 'None' && originState.status != 'PendingSignature') setIsPending(false);
-  }, [originState.status]);
-  const buttonIsLoading = transactionState.isLoading || isPending;
+    if (originState?.status != 'None' && originState?.status != 'PendingSignature') setIsPending(false);
+  }, [originState?.status]);
+  const buttonIsLoading = transactionState?.isLoading || isPending;
 
   return (
     <div>
@@ -180,17 +186,17 @@ const SendMessage = () => {
           <Grid.Column>
             <h4>{chains.find(x => x.chainId === chainId)?.chainName} Status</h4>
             <p className='wrp'>{originState?.transaction?.hash}</p>
-            <p className='wrp'>{transactionState.originTxState}</p>
+            <p className='wrp'>{transactionState?.originTxState}</p>
           </Grid.Column>
           <Grid.Column>
             <h4>Protocol Status</h4>
             <p className='wrp'>{originState?.transaction?.hash}</p>
-            <p className='wrp'>{transactionState.middlemanTxState}</p>
+            <p className='wrp'>{transactionState?.middlemanTxState}</p>
           </Grid.Column>
           <Grid.Column>
             <h4>{chains.find(x => x.chainId === destination)?.chainName} Status</h4>
-            {transactionState.destTxHash && <p className='wrp'>{transactionState.destTxHash}</p>}
-            <p className='wrp'>{transactionState.destTxState}</p>
+            {transactionState?.destTxHash && <p className='wrp'>{transactionState?.destTxHash}</p>}
+            <p className='wrp'>{transactionState?.destTxState}</p>
           </Grid.Column>
         </Grid.Row>
       </Grid>
@@ -224,6 +230,7 @@ const SendMessage = () => {
           </Grid>
         </>
       }
+      {CrossChainConfigurer}
     </div>
   );
 };
