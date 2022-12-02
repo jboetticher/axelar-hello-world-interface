@@ -47,7 +47,7 @@ const SendMessage = ({ currentModule }: { currentModule: ConnectedContractModule
   const protocolOptions: DropdownItemProps[] = [
     { key: 0, value: "axelar", text: "Axelar", image: { avatar: true, src: './logos/axelar.svg' } },
     { key: 1, value: "hyperlane", text: "Hyperlane", image: { avatar: true, src: './logos/hyperlane.png' } },
-    //{ key: 2, value: "layerzero", text: "Layer Zero", image: { avatar: true, src: './logos/layerzero.png' } },
+    { key: 2, value: "layerzero", text: "Layer Zero", image: { avatar: true, src: './logos/layerzero.png' } },
   ];
   const [protocol, setProtocol] = useState<string>(currentModule.protocolName);
 

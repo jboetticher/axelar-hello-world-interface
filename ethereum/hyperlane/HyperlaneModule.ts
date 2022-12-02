@@ -4,15 +4,12 @@ import {
   useContractFunction, Params, Chain
 } from '@usedapp/core';
 import { ContractFunctionNames, Falsy, TransactionOptions, TransactionStatus, TypedContract } from '@usedapp/core/dist/esm/src/model';
-import { AxelarGMPRecoveryAPI, Environment, GMPStatus, GMPStatusResponse, AxelarQueryAPI, EvmChain } from '@axelar-network/axelarjs-sdk';
 import { TransactionReceipt } from '@ethersproject/abstract-provider';
 import TransactionState from '../TransactionState';
 import { LogDescription } from 'ethers/lib/utils';
 import ConnectedContractModule from '../ConnectedContractModule';
 import abi from './HyperlaneHelloWorldMessage.json';
-import { tokenName } from '../axelar/axelarHelpers';
 import { HyperlaneCore, MultiProvider, objMap, chainConnectionConfigs, DispatchedMessage } from '@hyperlane-xyz/sdk';
-import { Wallet } from 'ethers';
 
 const prodConfigs = {
   moonbasealpha: chainConnectionConfigs.moonbasealpha,
