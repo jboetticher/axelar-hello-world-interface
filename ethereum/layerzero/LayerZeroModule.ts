@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import {
-  MoonbaseAlpha, BSCTestnet, AvalancheTestnet, Mumbai, FantomTestnet,
+  MoonbaseAlpha, BSCTestnet, AvalancheTestnet, Mumbai, FantomTestnet, 
   useContractFunction, Params, Chain
 } from '@usedapp/core';
-import { ContractFunctionNames, Falsy, TransactionOptions, TransactionStatus, TypedContract } from '@usedapp/core/dist/esm/src/model';
+import { ContractFunctionNames, Falsy, Fantom, TransactionOptions, TransactionStatus, TypedContract } from '@usedapp/core/dist/esm/src/model';
 import { TransactionReceipt } from '@ethersproject/abstract-provider';
 import TransactionState from '../TransactionState';
 import { LogDescription } from 'ethers/lib/utils';
@@ -117,7 +117,7 @@ export function chainIdToLayerZero(chainId: number): number {
     case AvalancheTestnet.chainId: return 10106;
     case Mumbai.chainId: return 10109;
     case BSCTestnet.chainId: return 10102;
-    //case Harmony.chainId: return 10133;
+    case FantomTestnet.chainId: return 10112;
   }
   throw new Error(`Chain ${chainId} is not supported!`);
 }

@@ -11,6 +11,7 @@ import HyperlaneModule from '../ethereum/hyperlane/HyperlaneModule';
 import ConnectedContractModule from '../ethereum/ConnectedContractModule';
 import { TransactionReceipt } from '@ethersproject/abstract-provider';
 import { chainIdToHyperlane } from '../ethereum/hyperlane/HyperlaneModule';
+import { chainIdToLayerZero } from '../ethereum/layerzero/LayerZeroModule';
 
 /**
  * Converts a chainId to a faucet URL
@@ -89,6 +90,7 @@ const SendMessage = ({ currentModule }: { currentModule: ConnectedContractModule
         txReceipt = await send(chainIdToHyperlane(destination), message, { value: crossChainGasFee });
         break;
       case 'layerzero':
+        txReceipt = await send(message, chainIdToLayerZero(destination), { value: crossChainGasFee });
         break;
     }
   }
