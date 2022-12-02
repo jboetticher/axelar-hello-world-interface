@@ -45,7 +45,6 @@ export function useAxelarFunction
   const { state, send, events, resetState } = useContractFunction(contract, functionName, options);
   let [entireState, setEntireState] = useState<AxelarTransactionState>(AxelarTransactionState.None);
   let [gmp, setGMP] = useState<GMPStatusResponse>(null);
-  let [destTx, setDestTx] = useState(null); // This is necessary because of the foolish antipattern
 
   // Rename to origin state
   const originState: TransactionStatus = state;
@@ -107,7 +106,6 @@ export function useAxelarFunction
   function newResetState() {
     setEntireState(AxelarTransactionState.None);
     setGMP(null);
-    setDestTx(null);
     resetState();
   }
 
