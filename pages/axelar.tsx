@@ -1,13 +1,17 @@
 import React, { useEffect, useState } from 'react';
 import SendMessage from '../components/SendMessage';
 import PageWrapper from '../components/PageWrapper';
+import AxelarModule from '../ethereum/axelar/AxelarModule';
 
-const Dashboard = () => {
+const AxelarPage = () => {
+
+  const module = new AxelarModule();
+
   return (
     <PageWrapper>
-      <SendMessage />
+      <SendMessage currentModule={module} />
     </PageWrapper>
   );
 };
 
-export default Dashboard;
+export default AxelarPage;

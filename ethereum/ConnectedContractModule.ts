@@ -8,6 +8,11 @@ import TransactionState from "./TransactionState";
 
 abstract class ConnectedContractModule {
   /**
+   * The name of the protocol in lowercase so that it can be identified in switch statements.
+   */
+  abstract protocolName: string;
+
+  /**
    * The chains that this connected contract module should be able to connect to.
    */
   abstract chains: Chain[];

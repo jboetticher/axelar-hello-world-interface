@@ -209,5 +209,6 @@ export default class HyperlaneModule extends ConnectedContractModule {
   addresses: { [x: number]: string } = addresses;
   calculateNativeGasFee = calculateAxelarGasFee;
   chains: Chain[] = [MoonbaseAlpha, AvalancheTestnet];
+  protocolName = 'hyperlane';
   useCrossChainFunction = useHyperlaneFunction;
 }

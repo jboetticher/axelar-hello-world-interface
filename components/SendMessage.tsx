@@ -35,7 +35,7 @@ Each protocol has their own:
 - Contract deployments
 */
 
-const SendMessage = () => {
+const SendMessage = ({ currentModule }: { currentModule: ConnectedContractModule }) => {
   // State for sending the message
   const [message, setMessage] = useState<string>();
   const [destination, setDestination] = useState<number>();
@@ -49,9 +49,7 @@ const SendMessage = () => {
     { key: 1, value: "hyperlane", text: "Hyperlane", image: { avatar: true, src: './logos/hyperlane.png' } },
     //{ key: 2, value: "layerzero", text: "Layer Zero", image: { avatar: true, src: './logos/layerzero.png' } },
   ];
-  const [protocol, setProtocol] = useState<string>(protocolOptions[0].value as string);
-  const modules = { axelar: new AxelarModule(), hyperlane: new HyperlaneModule(), layerzero: new AxelarModule() };
-  const currentModule: ConnectedContractModule = modules[protocol ?? protocolOptions[0].value as string];
+  const [protocol, setProtocol] = useState<string>(currentModule.protocolName);
 
   // Set up network options
   const chains: Chain[] = currentModule.chains;
@@ -83,7 +81,7 @@ const SendMessage = () => {
 
     // Send transaction. Not sure how best to modularize this since there will be different inputs for each implementation
     let txReceipt: TransactionReceipt;
-    switch(protocol) {
+    switch(currentModule.protocolName) {
       case 'axelar':
         txReceipt = await send(message, currentModule.addresses[destination], chainIdToAxelar(destination), { value: crossChainGasFee });
         break;
@@ -97,27 +95,14 @@ const SendMessage = () => {
 
   // Handle message reading from multiple chains
   const [networkToRead, setNetworkToRead] = useState<number>(MoonbaseAlpha.chainId);
-  const [protocolToRead, setProtocolToRead] = useState<string>('axelar');
   const chainReadOptions: DropdownItemProps[] = [];
-  const readChains: Chain[] = modules[protocolToRead ?? protocolOptions[0].value as string].chains;
+  const readChains: Chain[] = currentModule.chains;
   readChains.forEach(c => {
     chainReadOptions.push({ key: c.chainId, value: c.chainId, text: c.chainName, image: { avatar: true, src: `./logos/${c.chainName}.png` } });
   });
-  const readContract = new Contract(modules[protocolToRead].addresses[networkToRead], helloWorldInterface);
+  const readContract = new Contract(currentModule.addresses[networkToRead], helloWorldInterface);
   const call = useCall({ contract: readContract, method: 'lastMessage', args: [account ?? EMPTY_ADDRESS] }, { chainId: networkToRead });
   const lastMessage: string = call?.value?.[0];
-
-  // Ensure that no incorrect chain is read
-  function changeProtocolToRead(protocol: string) {
-    setProtocolToRead(protocol);
-  }
-  useEffect(() => {
-    if(modules[protocolToRead].addresses[protocolToRead] == null) {
-      const moduleToRead: ConnectedContractModule = modules[protocolToRead] as ConnectedContractModule;
-      setNetworkToRead(moduleToRead.chains[0].chainId);
-    }
-  }, [protocolToRead]);
-
 
   // Handle pending button & loading status
   useEffect(() => {
@@ -142,7 +127,10 @@ const SendMessage = () => {
             <Dropdown
               placeholder='Select protocol'
               options={protocolOptions} fluid selection
-              onChange={(_, data) => setProtocol(data?.value as string)}
+              onChange={(_, data) => { 
+                setProtocol(data?.value as string);
+                document.location.href = '/' + data?.value as string
+              }}
               value={protocol}
             />
           </Grid.Column>
@@ -200,21 +188,13 @@ const SendMessage = () => {
         <>
           <h3>Read Hello World Contracts</h3>
           <Grid centered divided='vertically' textAlign='center'>
-            <Grid.Row centered columns={3} textAlign='center'>
+            <Grid.Row centered columns={2} textAlign='center'>
               <Grid.Column>
                 <Dropdown
                   placeholder='Select network to read'
                   options={chainReadOptions} fluid selection
                   onChange={(_, data) => setNetworkToRead(data?.value as number)}
                   value={networkToRead}
-                />
-              </Grid.Column>
-              <Grid.Column>
-                <Dropdown
-                  placeholder='Select protocol'
-                  options={protocolOptions} fluid selection
-                  onChange={(_, data) => changeProtocolToRead(data?.value as string)}
-                  value={protocolToRead}
                 />
               </Grid.Column>
               <Grid.Column>

@@ -184,5 +184,6 @@ export default class AxelarModule extends ConnectedContractModule {
   addresses: { [x: number]: string } = addresses;
   calculateNativeGasFee = calculateAxelarGasFee;
   chains: Chain[] = [MoonbaseAlpha, FantomTestnet, AvalancheTestnet, Mumbai];
+  protocolName = 'axelar';
   useCrossChainFunction = useAxelarFunction;
 }
