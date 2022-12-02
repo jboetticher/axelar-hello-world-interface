@@ -8,7 +8,7 @@ const AxelarPage = () => {
   const module = new AxelarModule();
 
   return (
-    <PageWrapper>
+    <PageWrapper name="Axelar">
       <SendMessage currentModule={module} />
     </PageWrapper>
   );

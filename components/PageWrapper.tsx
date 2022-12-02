@@ -5,7 +5,7 @@ import SendMessage from '../components/SendMessage';
 import Link from 'next/link';
 import { MoonbaseAlpha, FantomTestnet, AvalancheTestnet, Mumbai, useEthers } from '@usedapp/core';
 
-const PageWrapper = ({children}) => {
+const PageWrapper = ({children, name}) => {
   // Initial State
   const { account, chainId, error, deactivate, activateBrowserWallet } = useEthers();
   const isConnected = account !== undefined;
@@ -25,7 +25,7 @@ const PageWrapper = ({children}) => {
   return (
     <Container>
       <Head>
-        <title>Axelar {'<'}{'>'} Moonbase Hello World</title>
+        <title>{name} {'<'}{'>'} Moonbase Hello World</title>
         <link rel='icon' type='image/png' sizes='32x32' href='/favicon.png' />
         <link
           rel='stylesheet'

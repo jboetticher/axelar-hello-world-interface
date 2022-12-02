@@ -8,7 +8,7 @@ const HyperlanePage = () => {
   const module = new HyperlaneModule();
 
   return (
-    <PageWrapper>
+    <PageWrapper name="Hyperlane">
       <SendMessage currentModule={module} />
     </PageWrapper>
   );
