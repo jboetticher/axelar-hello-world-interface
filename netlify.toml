@@ -5,6 +5,12 @@
   to = "/index.html"
   status = 200
 
+[[redirects]]
+  from = "/"
+  to = "/axelar"
+  status = 302
+  force = false
+
 [[headers]]
   # Define which paths this specific [[headers]] block will cover.
   for = "/*"

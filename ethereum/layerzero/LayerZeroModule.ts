@@ -3,7 +3,7 @@ import {
   MoonbaseAlpha, BSCTestnet, AvalancheTestnet, Mumbai, FantomTestnet, 
   useContractFunction, Params, Chain
 } from '@usedapp/core';
-import { ContractFunctionNames, Falsy, Fantom, TransactionOptions, TransactionStatus, TypedContract } from '@usedapp/core/dist/esm/src/model';
+import { ContractFunctionNames, Falsy, TransactionOptions, TransactionStatus, TypedContract } from '@usedapp/core/dist/esm/src/model';
 import { TransactionReceipt } from '@ethersproject/abstract-provider';
 import TransactionState from '../TransactionState';
 import { LogDescription } from 'ethers/lib/utils';
