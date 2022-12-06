@@ -6,8 +6,7 @@ import {
 } from '@usedapp/core';
 import { utils } from 'ethers';
 import { Contract } from '@ethersproject/contracts';
-import AxelarModule, { chainIdToAxelar } from '../ethereum/axelar/AxelarModule';
-import HyperlaneModule from '../ethereum/hyperlane/HyperlaneModule';
+import { chainIdToAxelar } from '../ethereum/axelar/AxelarModule';
 import ConnectedContractModule from '../ethereum/ConnectedContractModule';
 import { TransactionReceipt } from '@ethersproject/abstract-provider';
 import { chainIdToHyperlane } from '../ethereum/hyperlane/HyperlaneModule';
@@ -116,7 +115,8 @@ const SendMessage = ({ currentModule }: { currentModule: ConnectedContractModule
     <div>
       <h3>Hello World Messaging</h3>
       <p>
-        Send a string message from one chain to another. Select your destination and origin chains below.
+        Send a string message from one chain to another. Select your destination and origin chains below. The code for this frontend is stored in a 
+        <a href="https://github.com/PureStake/multichain-hello-world-interface" target="_blank"> public GitHub repository.</a>
       </p>
       <Grid centered divided='vertically' textAlign='center'>
         <Grid.Row centered columns={5} textAlign='center'>
