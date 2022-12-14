@@ -2,7 +2,6 @@ import React, { useEffect, useState } from 'react';
 import SendMessage from '../components/SendMessage';
 import PageWrapper from '../components/PageWrapper';
 import LayerZeroModule from '../ethereum/layerzero/LayerZeroModule';
-import HyperlaneModule from '../ethereum/hyperlane/HyperlaneModule';
 
 const LayerZeroPage = () => {
 

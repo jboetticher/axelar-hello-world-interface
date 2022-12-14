@@ -11,6 +11,7 @@ import ConnectedContractModule from '../ethereum/ConnectedContractModule';
 import { TransactionReceipt } from '@ethersproject/abstract-provider';
 import { chainIdToHyperlane } from '../ethereum/hyperlane/HyperlaneModule';
 import { chainIdToLayerZero } from '../ethereum/layerzero/LayerZeroModule';
+import { chainIdToWormhole } from '../ethereum/wormhole/WormholeModule';
 
 /**
  * Converts a chainId to a faucet URL
@@ -48,6 +49,7 @@ const SendMessage = ({ currentModule }: { currentModule: ConnectedContractModule
     { key: 0, value: "axelar", text: "Axelar", image: { avatar: true, src: './logos/axelar.svg' } },
     { key: 1, value: "hyperlane", text: "Hyperlane", image: { avatar: true, src: './logos/hyperlane.png' } },
     { key: 2, value: "layerzero", text: "Layer Zero", image: { avatar: true, src: './logos/layerzero.png' } },
+    { key: 3, value: "wormhole", text: "Wormhole", image: { avatar: true, src: './logos/wormhole.png' } },
   ];
   const [protocol, setProtocol] = useState<string>(currentModule.protocolName);
 
@@ -90,6 +92,9 @@ const SendMessage = ({ currentModule }: { currentModule: ConnectedContractModule
         break;
       case 'layerzero':
         txReceipt = await send(message, chainIdToLayerZero(destination), { value: crossChainGasFee });
+        break;
+      case 'wormhole':
+        txReceipt = await send(message, currentModule.addresses[destination], chainIdToWormhole(destination))
         break;
     }
   }
