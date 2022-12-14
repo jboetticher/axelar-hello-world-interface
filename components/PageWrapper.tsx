@@ -11,7 +11,7 @@ const PageWrapper = ({children, name}) => {
   const isConnected = account !== undefined;
 
   const networkName = (() => {
-    if (chainId === undefined && error.name === 'ChainIdError') return 'Not Supported';
+    if (chainId === undefined && error?.name === 'ChainIdError') return 'Not Supported';
     switch (chainId) {
       case undefined: return 'Not Connected';
       case MoonbaseAlpha.chainId: return 'Moonbase Alpha';
